@@ -39,6 +39,26 @@ $totalIssued = $db->fetchColumn("SELECT COUNT(*) FROM book_issues WHERE user_id 
 // Pending fines
 $pendingFines = $db->fetchColumn("SELECT COALESCE(SUM(fine_amount), 0) FROM fines WHERE user_id = ? AND status = 'pending'", [$userId]) ?? 0;
 
+// Get book requests for the student
+$bookRequests = $db->fetchAll("
+    SELECT br.*, b.title, b.author, b.isbn, b.available_copies,
+           u.full_name as processed_by_name,
+           DATE_FORMAT(br.request_date, '%b %d, %Y %h:%i %p') as formatted_date,
+           CASE 
+               WHEN br.status = 'pending' THEN 'warning'
+               WHEN br.status = 'approved' THEN 'success'
+               WHEN br.status = 'rejected' THEN 'danger'
+               WHEN br.status = 'fulfilled' THEN 'info'
+               ELSE 'secondary'
+           END as status_class
+    FROM book_requests br
+    JOIN books b ON br.book_id = b.book_id
+    LEFT JOIN users u ON br.processed_by = u.user_id
+    WHERE br.user_id = ?
+    ORDER BY br.request_date DESC
+    LIMIT 5
+", [$userId]) ?? [];
+
 // Current issued books
 $currentBooks = $db->fetchAll("
     SELECT bi.*, b.title, b.author, b.isbn, c.category_name,
@@ -249,6 +269,64 @@ include '../includes/student_header.php';
                                         <a href="search_books.php" class="btn btn-primary btn-lg shadow-sm">
                                             <i class="fas fa-search me-2"></i>
                                             Search for books to start reading!
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- My Book Requests -->
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 text-primary">
+                                    <i class="fas fa-clipboard-list me-2"></i>My Book Requests
+                                </h5>
+                                <a href="my_requests.php" class="btn btn-sm btn-outline-primary">View All</a>
+                            </div>
+                            <div class="card-body">
+                                <?php if (!empty($bookRequests)): ?>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Book</th>
+                                                    <th>Status</th>
+                                                    <th>Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($bookRequests as $request): ?>
+                                                    <tr>
+                                                        <td>
+                                                            <div class="fw-bold"><?= htmlspecialchars($request['title']) ?></div>
+                                                            <small class="text-muted"><?= $request['author'] ?></small>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-<?= $request['status_class'] ?>">
+                                                                <?= ucfirst($request['status']) ?>
+                                                            </span>
+                                                            <?php if (!empty($request['admin_notes'])): ?>
+                                                                <div class="small text-muted mt-1">
+                                                                    <?= nl2br(htmlspecialchars(mb_strimwidth($request['admin_notes'], 0, 50, '...'))) ?>
+                                                                </div>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td class="text-nowrap">
+                                                            <?= $request['formatted_date'] ?>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="text-center py-3">
+                                        <div class="text-muted mb-2">
+                                            <i class="fas fa-inbox fa-3x opacity-25"></i>
+                                        </div>
+                                        <p class="mb-0">No book requests found</p>
+                                        <a href="search_books.php" class="btn btn-sm btn-primary mt-2">
+                                            <i class="fas fa-plus me-1"></i> Request a Book
                                         </a>
                                     </div>
                                 <?php endif; ?>

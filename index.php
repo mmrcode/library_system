@@ -416,7 +416,7 @@ $libraryPhone = getSystemSetting('library_phone', '+91-XXXXXXXXXX');
                                 <h6 class="mb-2"><i class="fas fa-users me-2"></i>Login Credentials:</h6>
                                 <div class="row text-start">
                                     <div class="col-md-6">
-                                        <strong class="text-primary">Admin Access:</strong><br>
+                                        <strong class="text-primary">Librarian Access:</strong><br>
                                         <small>Username: <code>admin</code><br>
                                         Password: <code>admin123</code></small>
                                     </div>
@@ -441,19 +441,14 @@ $libraryPhone = getSystemSetting('library_phone', '+91-XXXXXXXXXX');
     </div>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white py-4">
+    <footer class="bg-primary text-white py-4">
         <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5><?php echo htmlspecialchars($libraryName); ?></h5>
-                    <p class="text-muted">Digital Library Management System</p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <p class="text-muted">
-                        &copy; 2025 Mohammad Muqsit Raja (BCA22739)<br>
-                        University of Mysore
-                    </p>
-                </div>
+            <div class="text-center">
+                <h5 class="mb-2">University Library</h5>
+                <p class="text-light mb-2">Digital Library Management System</p>
+                <p class="text-light mb-0">
+                    © 2025 Library Management System - Mohammad Muqsit Raja
+                </p>
             </div>
         </div>
     </footer>

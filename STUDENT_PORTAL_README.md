@@ -10,25 +10,38 @@ The Student Portal has been completely restructured and organized to provide a m
 
 ## 🚀 New Features & Improvements
 
-### 1. **Restructured Dashboard**
+### 1. **Book Request System**
+- **Easy Request Submission**: Request books with just a few clicks
+- **Priority Levels**: Set request priority (Low, Medium, High)
+- **Duration Selection**: Specify how long you need the book
+- **Status Tracking**: Real-time updates on your request status
+- **Notes to Librarian**: Add special instructions or requests
+
+### 2. **In-App Messaging**
+- **Direct Communication**: Message librarians directly
+- **Threaded Conversations**: Keep track of all communications
+- **Read Receipts**: See when your messages are read
+- **Notification Alerts**: Get notified of new messages
+
+### 3. **Restructured Dashboard**
 - **Clean Layout**: Removed duplicate content and improved visual hierarchy
 - **Responsive Design**: Better mobile and tablet experience
 - **Real-time Updates**: Auto-refresh functionality for live data
 - **Enhanced Statistics**: Improved dashboard cards with better visual feedback
 
-### 2. **New AJAX Functionality**
+### 4. **New AJAX Functionality**
 - **Dynamic Search**: Real-time book search with filters
 - **Live Notifications**: Automatic overdue book alerts
 - **Session Management**: Extended session functionality
 - **Data Loading**: Asynchronous data loading for better performance
 
-### 3. **Enhanced User Experience**
+### 5. **Enhanced User Experience**
 - **Modern UI**: Updated styling with gradients and animations
 - **Interactive Elements**: Hover effects and smooth transitions
 - **Better Navigation**: Improved menu structure and breadcrumbs
 - **Mobile Optimization**: Responsive design for all devices
 
-### 4. **Modern Book Display System**
+### 6. **Modern Book Display System**
 - **Stylized Book Names**: Beautiful gradient displays with book titles
 - **Professional Design**: Clean, modern visual presentation without requiring cover images
 - **Consistent Styling**: Uniform book display across all student portal modals
@@ -149,12 +162,17 @@ includes/
 ## 🎯 User Experience Features
 
 ### 1. **Smart Notifications**
+- **Request Updates**: Get notified when your book requests are processed
+- **Message Alerts**: New message notifications
 - **Overdue Alerts**: Automatic overdue book notifications
 - **Due Soon Warnings**: Books due within 3 days
 - **Fine Notifications**: Pending fine alerts
 - **System Messages**: Important system notifications
 
 ### 2. **Interactive Elements**
+- **Request Buttons**: Quick access to request functionality
+- **Message Interface**: Clean, intuitive messaging system
+- **Status Indicators**: Clear visual feedback on request status
 - **Hover Effects**: Visual feedback on interaction
 - **Loading States**: Progress indicators
 - **Error Handling**: User-friendly error messages
@@ -167,17 +185,32 @@ Ensure all files are placed in the correct directory structure as shown above.
 
 ### 2. **Database Requirements**
 The system requires the following database tables:
-- `users` - Student information
+- `users` - Student and staff information
 - `books` - Book catalog
 - `book_issues` - Borrowing records
 - `categories` - Book categories
 - `fines` - Fine records
+- `book_requests` - Book request tracking
+- `messages` - In-app messaging
+- `notifications` - System notifications
+- `email_logs` - Email delivery tracking
 
 ### 3. **Configuration**
 Update the following configuration files:
 - `includes/config.php` - Database and system settings
 - `includes/functions.php` - Core functions
+- `includes/email_functions.php` - Email notifications
+- `includes/request_functions.php` - Request system
 - `assets/css/student.css` - Custom styling
+
+### 4. **Request System Setup**
+1. Run the request system setup script:
+   ```
+   http://yourdomain.com/setup_request_system.php
+   ```
+2. Configure email settings in the admin panel
+3. Set up notification preferences
+4. Test the request workflow
 
 ## 🔍 Usage Guide
 
@@ -186,18 +219,26 @@ Update the following configuration files:
 - **Current Books**: See currently borrowed books
 - **Recent Activity**: View recent library activity
 - **Recommendations**: Discover new books
+- **Request Status**: Track your book requests
+- **Messages**: Check for new communications
 
-### 2. **Book Search**
+### 2. **Book Search & Request**
 - **Search Bar**: Enter book title, author, or ISBN
 - **Category Filter**: Filter by book category
 - **Availability Filter**: Show only available books
 - **Advanced Search**: Use multiple search criteria
+- **Request Books**: Click the request button on any book
+- **Track Requests**: View status of your requests
+- **Message Librarian**: Ask questions about availability
 
-### 3. **My Books Management**
+### 3. **My Books & Requests**
 - **Current Issues**: View borrowed books
 - **Due Dates**: Check return deadlines
 - **Fine Status**: Monitor pending fines
 - **Return History**: View past borrowings
+- **My Requests**: Track all book requests
+- **Request History**: View past requests and status
+- **Renewal Requests**: Request book renewals
 
 ## 🚀 Future Enhancements
 

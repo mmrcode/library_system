@@ -23,11 +23,25 @@
 - **Password**: `admin123`
 - **Features**: Full system administration
 
+### Librarian Access
+- **Username**: `librarian1`
+- **Password**: `password123`
+- **Features**: Book management, request processing, user communication
+
 ### Student Access (Sample Users)
-- **Username**: `student1` to `student10` | **Password**: `password123`
-- **Faculty**: `faculty1` to `faculty4` | **Password**: `password123`
-- **Librarian**: `librarian1` | **Password**: `password123`
-- **Features**: Book browsing, issue history, profile management
+- **Username**: `student1` to `student10`
+- **Password**: `password123`
+- **Features**: 
+  - Book browsing and searching
+  - Book request submission
+  - In-app messaging with librarians
+  - Request status tracking
+  - Issue history and profile management
+
+### Faculty Access
+- **Username**: `faculty1` to `faculty4`
+- **Password**: `password123`
+- **Features**: Extended borrowing privileges, priority request handling
 
 ## 🛠️ Installation Steps
 
@@ -38,8 +52,16 @@
 2. **Run Setup**
    - Visit: http://localhost/library_system/setup.php
    - Follow the 4-step wizard
+   - **Important**: After initial setup, run: http://localhost/library_system/setup_request_system.php
+     - This will set up the book request system tables
+     - Must be logged in as admin
 
-3. **Access System**
+3. **Verify Email Configuration**
+   - Navigate to Admin Panel > System Settings
+   - Configure SMTP settings for email notifications
+   - Test the email functionality
+
+4. **Access System**
    - Visit: http://localhost/library_system/
    - Login with admin credentials
 
@@ -72,17 +94,39 @@ library_system/
 
 ## 🔧 Key Features
 
-### Admin Features
+### Admin & Librarian Features
 - ✅ Book Management (Add/Edit/Delete)
 - ✅ User Management (Students/Faculty)
+- ✅ Request Processing System
+  - View and manage book requests
+  - Set request priorities
+  - Approve/Reject requests
+  - Track request status
+- ✅ Communication Tools
+  - In-app messaging with students
+  - Email notifications
+  - Broadcast announcements
 - ✅ Issue & Return Processing
 - ✅ Fine Management
 - ✅ Reports & Analytics
 - ✅ Category Management
 - ✅ System Settings
 
-### Student Features
+### Student & Faculty Features
 - ✅ Book Search & Browse
+- ✅ Book Request System
+  - Submit book requests
+  - Set priority levels
+  - Specify needed duration
+  - Add special notes
+- ✅ Communication Center
+  - Message librarians directly
+  - Receive notifications
+  - View message history
+- ✅ Request Tracking
+  - View request status
+  - Check approval status
+  - Receive updates
 - ✅ View Issued Books
 - ✅ Check Due Dates
 - ✅ View Fine Details
@@ -122,11 +166,24 @@ library_system/
 
 - **6 Book Categories**: Computer Science, Mathematics, Physics, Literature, History, Business
 - **40+ Sample Books**: Programming, AI/ML, Mathematics, Physics, Literature, Economics, and more
-- **15+ Sample Users**: 1 Admin, 10 Students, 4 Faculty, 1 Librarian
+- **15+ Sample Users**: 
+  - 1 Admin
+  - 10 Students
+  - 4 Faculty
+  - 1 Librarian
 - **20+ Sample Issues**: Active, returned, and overdue books with realistic transaction history
+- **Sample Book Requests**:
+  - Pending approval
+  - Approved and fulfilled
+  - Rejected with reasons
+  - Various priority levels
+- **Sample Messages**:
+  - Student inquiries
+  - Librarian responses
+  - System notifications
 - **Fine Records**: Sample overdue fines with different statuses
 - **Activity Logs**: Comprehensive system activity tracking
-- **System Settings**: Complete library configuration
+- **System Settings**: Complete library configuration including email and request settings
 
 ## 🚨 Troubleshooting
 
@@ -135,14 +192,28 @@ library_system/
 1. **"Database connection failed"**
    - Check if MySQL is running
    - Verify credentials in `includes/config.php`
+   - Ensure all required database tables exist
 
 2. **"Setup page not found"**
    - Ensure files are in `xampp/htdocs/library_system/`
    - Check Apache is running
+   - Verify .htaccess rules if using URL rewriting
 
 3. **"Permission denied"**
-   - Check file permissions
+   - Check file permissions (755 for directories, 644 for files)
    - Ensure web server can access files
+   - Verify uploads directory has write permissions (777 recommended for uploads)
+
+4. **"Email not sending"**
+   - Check SMTP settings in admin panel
+   - Verify PHP mail() function is working
+   - Check spam/junk folders
+   - Review `email_logs` table for error messages
+
+5. **Book request issues**
+   - Ensure `setup_request_system.php` was run
+   - Check database tables: book_requests, messages, notifications
+   - Verify user roles and permissions
 
 ### Error Logs
 - **Apache**: `xampp/apache/logs/error.log`

@@ -43,6 +43,25 @@ $totalFines = $db->fetchColumn("SELECT COALESCE(SUM(fine_amount), 0) FROM fines 
 // Available books
 $availableBooks = $db->fetchColumn("SELECT SUM(available_copies) FROM books WHERE status = 'active'") ?? 0;
 
+// Pending book requests
+$pendingRequests = $db->fetchAll("
+    SELECT br.*, b.title, b.isbn, u.full_name as student_name, u.email 
+    FROM book_requests br
+    JOIN books b ON br.book_id = b.book_id
+    JOIN users u ON br.user_id = u.user_id
+    WHERE br.status = 'pending'
+    ORDER BY 
+        CASE br.priority 
+            WHEN 'urgent' THEN 1
+            WHEN 'high' THEN 2
+            WHEN 'normal' THEN 3
+            WHEN 'low' THEN 4
+            ELSE 5
+        END,
+        br.request_date
+    LIMIT 10
+") ?? [];
+
 // Recent activities
 $recentActivities = $db->fetchAll("
     SELECT al.*, u.full_name 
@@ -297,6 +316,87 @@ include '../includes/admin_header.php';
                 </div>
             </div>
 
+            <!-- Pending Book Requests -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="fas fa-book-reader me-2"></i>Pending Book Requests
+                            </h6>
+                            <a href="book_requests.php" class="btn btn-sm btn-primary">View All</a>
+                        </div>
+                        <div class="card-body">
+                            <?php if (count($pendingRequests) > 0): ?>
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="pendingRequestsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Request ID</th>
+                                                <th>Book</th>
+                                                <th>Student</th>
+                                                <th>Priority</th>
+                                                <th>Requested On</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($pendingRequests as $request): ?>
+                                                <tr>
+                                                    <td>#<?= $request['request_id'] ?></td>
+                                                    <td>
+                                                        <strong><?= htmlspecialchars($request['title']) ?></strong><br>
+                                                        <small class="text-muted">ISBN: <?= $request['isbn'] ?></small>
+                                                    </td>
+                                                    <td>
+                                                        <?= htmlspecialchars($request['student_name']) ?><br>
+                                                        <small class="text-muted"><?= $request['email'] ?></small>
+                                                    </td>
+                                                    <td>
+                                                        <?php 
+                                                        $badgeClass = [
+                                                            'urgent' => 'danger',
+                                                            'high' => 'warning',
+                                                            'normal' => 'primary',
+                                                            'low' => 'secondary'
+                                                        ][$request['priority']] ?? 'secondary';
+                                                        ?>
+                                                        <span class="badge bg-<?= $badgeClass ?>">
+                                                            <?= ucfirst($request['priority']) ?>
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <?= date('M d, Y', strtotime($request['request_date'])) ?><br>
+                                                        <small class="text-muted"><?= date('h:i A', strtotime($request['request_date'])) ?></small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-sm btn-success approve-request" data-id="<?= $request['request_id'] ?>">
+                                                                <i class="fas fa-check"></i> Approve
+                                                            </button>
+                                                            <button class="btn btn-sm btn-danger reject-request" data-id="<?= $request['request_id'] ?>">
+                                                                <i class="fas fa-times"></i> Reject
+                                                            </button>
+                                                            <a href="book_request_details.php?id=<?= $request['request_id'] ?>" class="btn btn-sm btn-info">
+                                                                <i class="fas fa-eye"></i> View
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php else: ?>
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i> No pending book requests found.
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Recent Activities -->
             <div class="row">
                 <div class="col-12">
@@ -351,6 +451,81 @@ include '../includes/admin_header.php';
 <?php include '../includes/admin_footer.php'; ?>
 
 <script>
+// Handle approve/reject book requests
+document.addEventListener('DOMContentLoaded', function() {
+    // Approve request
+    document.querySelectorAll('.approve-request').forEach(button => {
+        button.addEventListener('click', function() {
+            const requestId = this.getAttribute('data-id');
+            if (confirm('Are you sure you want to approve this book request?')) {
+                updateRequestStatus(requestId, 'approved');
+            }
+        });
+    });
+
+    // Reject request
+    document.querySelectorAll('.reject-request').forEach(button => {
+        button.addEventListener('click', function() {
+            const requestId = this.getAttribute('data-id');
+            const reason = prompt('Please enter the reason for rejection:');
+            if (reason !== null) {
+                updateRequestStatus(requestId, 'rejected', reason);
+            }
+        });
+    });
+
+    // Function to update request status
+    function updateRequestStatus(requestId, status, reason = '') {
+        const formData = new FormData();
+        formData.append('request_id', requestId);
+        formData.append('status', status);
+        formData.append('reason', reason);
+        formData.append('action', 'update_request_status');
+
+        fetch('process_request.php', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                // Reload the page after 1.5 seconds
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showAlert('danger', data.message || 'An error occurred. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('danger', 'An error occurred. Please try again.');
+        });
+    }
+
+    // Show alert message
+    function showAlert(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        // Insert at the top of the main content
+        const mainContent = document.querySelector('main');
+        if (mainContent) {
+            mainContent.insertBefore(alertDiv, mainContent.firstChild);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                const bsAlert = new bootstrap.Alert(alertDiv);
+                bsAlert.close();
+            }, 5000);
+        }
+    }
+});
 // Auto-refresh dashboard every 5 minutes
 setTimeout(function() {
     location.reload();
