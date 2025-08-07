@@ -63,9 +63,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get filter parameters
 $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$view_request_id = isset($_GET['request_id']) ? (int)$_GET['request_id'] : null;
 
 // Get requests
 $requests = $requestSystem->getAllBookRequests($status_filter ?: null);
+
+// Get specific request details if viewing
+$viewRequest = null;
+if ($view_request_id) {
+    foreach ($requests as $request) {
+        if ($request['request_id'] == $view_request_id) {
+            $viewRequest = $request;
+            break;
+        }
+    }
+}
 
 // Filter by search if provided
 if ($search) {
@@ -232,7 +244,20 @@ include '../includes/admin_header.php';
                                 </thead>
                                 <tbody>
                                     <?php foreach ($requests as $request): ?>
-                                        <tr>
+                                        <tr data-request-id="<?php echo $request['request_id']; ?>"
+                                            data-student-name="<?php echo htmlspecialchars($request['full_name']); ?>"
+                                            data-reg-number="<?php echo htmlspecialchars($request['registration_number']); ?>"
+                                            data-email="<?php echo htmlspecialchars($request['email']); ?>"
+                                            data-book-title="<?php echo htmlspecialchars($request['title']); ?>"
+                                            data-author="<?php echo htmlspecialchars($request['author']); ?>"
+                                            data-isbn="<?php echo htmlspecialchars($request['isbn']); ?>"
+                                            data-request-type="<?php echo htmlspecialchars($request['request_type']); ?>"
+                                            data-priority="<?php echo htmlspecialchars($request['priority']); ?>"
+                                            data-duration="<?php echo htmlspecialchars($request['requested_duration']); ?>"
+                                            data-notes="<?php echo htmlspecialchars($request['notes'] ?? ''); ?>"
+                                            data-status="<?php echo htmlspecialchars($request['status']); ?>"
+                                            data-request-date="<?php echo date('M j, Y g:i A', strtotime($request['request_date'])); ?>"
+                                            data-admin-notes="<?php echo htmlspecialchars($request['admin_notes'] ?? ''); ?>">
                                             <td>
                                                 <input type="checkbox" name="request_ids[]" value="<?php echo $request['request_id']; ?>" class="request-checkbox">
                                             </td>
@@ -352,10 +377,37 @@ include '../includes/admin_header.php';
     </div>
 </div>
 
+<!-- Request Details Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewModalLabel">Request Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="viewModalBody">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function processRequest(requestId, status) {
+    // Validate inputs
+    if (!requestId || !status) {
+        alert('Invalid request parameters.');
+        return;
+    }
+    
     document.getElementById('processRequestId').value = requestId;
     document.getElementById('processStatus').value = status;
+    
+    // Clear previous notes
+    document.getElementById('admin_notes').value = '';
     
     const modal = new bootstrap.Modal(document.getElementById('processModal'));
     const title = document.getElementById('processModalLabel');
@@ -399,12 +451,120 @@ function confirmBulkAction() {
         return false;
     }
     
-    return confirm(`Are you sure you want to process ${selected.length} request(s)?`);
+    const bulkStatus = document.querySelector('select[name="bulk_status"]').value;
+    if (!bulkStatus) {
+        alert('Please select an action to perform.');
+        return false;
+    }
+    
+    return confirm(`Are you sure you want to ${bulkStatus} ${selected.length} request(s)?`);
 }
 
+// Add form submission handler for the process form
+document.addEventListener('DOMContentLoaded', function() {
+    const processForm = document.getElementById('processForm');
+    if (processForm) {
+        processForm.addEventListener('submit', function(e) {
+            const requestId = document.getElementById('processRequestId').value;
+            const status = document.getElementById('processStatus').value;
+            
+            if (!requestId || !status) {
+                e.preventDefault();
+                alert('Missing required information. Please try again.');
+                return false;
+            }
+            
+            // Show loading state
+            const submitBtn = document.getElementById('processSubmitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+            submitBtn.disabled = true;
+            
+            // Re-enable button after a delay in case of errors
+            setTimeout(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 5000);
+        });
+    }
+});
+
 function viewRequestDetails(requestId) {
-    // This could open a detailed view modal
-    window.location.href = 'book_requests.php?request_id=' + requestId;
+    // Find the request data from the page
+    const requestRow = document.querySelector(`tr[data-request-id="${requestId}"]`);
+    if (!requestRow) {
+        alert('Request details not found.');
+        return;
+    }
+    
+    // Get request data from data attributes
+    const requestData = {
+        id: requestRow.dataset.requestId,
+        studentName: requestRow.dataset.studentName,
+        regNumber: requestRow.dataset.regNumber,
+        email: requestRow.dataset.email,
+        bookTitle: requestRow.dataset.bookTitle,
+        author: requestRow.dataset.author,
+        isbn: requestRow.dataset.isbn,
+        requestType: requestRow.dataset.requestType,
+        priority: requestRow.dataset.priority,
+        duration: requestRow.dataset.duration,
+        notes: requestRow.dataset.notes || 'No notes provided',
+        status: requestRow.dataset.status,
+        requestDate: requestRow.dataset.requestDate,
+        adminNotes: requestRow.dataset.adminNotes || 'No admin notes'
+    };
+    
+    // Populate modal content
+    const modalBody = document.getElementById('viewModalBody');
+    modalBody.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-primary"><i class="fas fa-user me-2"></i>Student Information</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Name:</strong></td><td>${requestData.studentName}</td></tr>
+                    <tr><td><strong>Registration:</strong></td><td>${requestData.regNumber}</td></tr>
+                    <tr><td><strong>Email:</strong></td><td>${requestData.email}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-primary"><i class="fas fa-book me-2"></i>Book Information</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Title:</strong></td><td>${requestData.bookTitle}</td></tr>
+                    <tr><td><strong>Author:</strong></td><td>${requestData.author}</td></tr>
+                    <tr><td><strong>ISBN:</strong></td><td>${requestData.isbn}</td></tr>
+                </table>
+            </div>
+        </div>
+        <hr>
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-primary"><i class="fas fa-info-circle me-2"></i>Request Details</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Type:</strong></td><td><span class="badge bg-secondary">${requestData.requestType}</span></td></tr>
+                    <tr><td><strong>Priority:</strong></td><td><span class="badge bg-${requestData.priority === 'urgent' ? 'danger' : (requestData.priority === 'high' ? 'warning' : 'info')}">${requestData.priority}</span></td></tr>
+                    <tr><td><strong>Duration:</strong></td><td>${requestData.duration} days</td></tr>
+                    <tr><td><strong>Status:</strong></td><td><span class="badge bg-${requestData.status === 'pending' ? 'warning' : (requestData.status === 'approved' ? 'info' : (requestData.status === 'fulfilled' ? 'success' : 'danger'))}">${requestData.status}</span></td></tr>
+                    <tr><td><strong>Request Date:</strong></td><td>${requestData.requestDate}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-primary"><i class="fas fa-sticky-note me-2"></i>Notes</h6>
+                <div class="mb-3">
+                    <strong>Student Notes:</strong><br>
+                    <div class="border p-2 bg-light rounded">${requestData.notes}</div>
+                </div>
+                <div>
+                    <strong>Admin Notes:</strong><br>
+                    <div class="border p-2 bg-light rounded">${requestData.adminNotes}</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('viewModal'));
+    modal.show();
 }
 </script>
 
