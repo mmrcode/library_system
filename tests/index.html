@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System - Unit Tests</title>
+    
+    <!-- Mocha CSS -->
+    <link href="https://unpkg.com/mocha@10.2.0/mocha.css" rel="stylesheet" />
+    
+    <!-- Custom Test Styles -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .test-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .test-header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        
+        .test-header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .test-controls {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-controls button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .test-controls button:hover {
+            background: #45a049;
+        }
+        
+        .test-controls button.danger {
+            background: #f44336;
+        }
+        
+        .test-controls button.danger:hover {
+            background: #da190b;
+        }
+        
+        #mocha {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .test-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .test-coverage {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .coverage-item {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 12px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        
+        .coverage-item.tested {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>🧪 Library Management System Tests</h1>
+        <p>Comprehensive unit testing for all system components</p>
+    </div>
+    
+    <div class="test-info">
+        <strong>📋 Test Coverage Areas:</strong>
+        <div style="margin-top: 10px;">
+            <span class="coverage-item tested">Book Request System</span>
+            <span class="coverage-item tested">Authentication</span>
+            <span class="coverage-item tested">Database Operations</span>
+            <span class="coverage-item tested">Email Functions</span>
+            <span class="coverage-item tested">Messaging System</span>
+            <span class="coverage-item">Search Functions</span>
+            <span class="coverage-item">Admin Dashboard</span>
+            <span class="coverage-item">Student Portal</span>
+        </div>
+    </div>
+    
+    <div class="test-controls">
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <button onclick="runSpecificSuite('BookRequest')">📚 Book Request Tests</button>
+        <button onclick="runSpecificSuite('Authentication')">🔐 Auth Tests</button>
+        <button onclick="runSpecificSuite('Database')">💾 Database Tests</button>
+        <button onclick="runSpecificSuite('Email')">📧 Email Tests</button>
+        <button onclick="clearResults()" class="danger">🗑️ Clear Results</button>
+    </div>
+    
+    <!-- Mocha Test Results Container -->
+    <div id="mocha"></div>
+    
+    <div class="test-coverage">
+        <h3>📊 Test Statistics</h3>
+        <div id="test-stats">
+            <p>Click "Run All Tests" to see detailed statistics</p>
+        </div>
+    </div>
+
+    <!-- Testing Libraries -->
+    <script src="https://unpkg.com/mocha@10.2.0/mocha.js"></script>
+    <script src="https://unpkg.com/chai@4.3.7/chai.js"></script>
+    <script src="https://unpkg.com/sinon@15.2.0/pkg/sinon.js"></script>
+    
+    <!-- Mock jQuery for testing -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Test Setup -->
+    <script>
+        // Setup Mocha
+        mocha.setup('bdd');
+        const expect = chai.expect;
+        const assert = chai.assert;
+        
+        // Test configuration
+        mocha.timeout(5000);
+        mocha.slow(1000);
+        
+        // Global test utilities
+        window.TestUtils = {
+            mockAjax: function(response) {
+                return sinon.stub($, 'ajax').resolves(response);
+            },
+            
+            restoreAjax: function() {
+                if ($.ajax.restore) {
+                    $.ajax.restore();
+                }
+            },
+            
+            createMockElement: function(tag, attributes = {}) {
+                const element = document.createElement(tag);
+                Object.keys(attributes).forEach(key => {
+                    element.setAttribute(key, attributes[key]);
+                });
+                return element;
+            },
+            
+            simulateEvent: function(element, eventType) {
+                const event = new Event(eventType, { bubbles: true });
+                element.dispatchEvent(event);
+            }
+        };
+        
+        // Test control functions
+        function runAllTests() {
+            mocha.run(function(failures) {
+                updateTestStats(failures);
+            });
+        }
+        
+        function runSpecificSuite(suiteName) {
+            mocha.grep(suiteName).run(function(failures) {
+                updateTestStats(failures);
+            });
+        }
+        
+        function clearResults() {
+            document.getElementById('mocha').innerHTML = '';
+            document.getElementById('test-stats').innerHTML = '<p>Click "Run All Tests" to see detailed statistics</p>';
+        }
+        
+        function updateTestStats(failures) {
+            const stats = mocha.stats;
+            const statsHtml = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                    <div style="text-align: center; padding: 10px; background: ${failures === 0 ? '#c8e6c9' : '#ffcdd2'}; border-radius: 8px;">
+                        <strong>${failures === 0 ? '✅' : '❌'} Overall</strong><br>
+                        ${failures === 0 ? 'All Passed' : failures + ' Failed'}
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: #e1f5fe; border-radius: 8px;">
+                        <strong>📊 Total Tests</strong><br>
+                        ${stats.tests || 0}
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: #c8e6c9; border-radius: 8px;">
+                        <strong>✅ Passed</strong><br>
+                        ${stats.passes || 0}
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: #ffcdd2; border-radius: 8px;">
+                        <strong>❌ Failed</strong><br>
+                        ${stats.failures || 0}
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: #fff3e0; border-radius: 8px;">
+                        <strong>⏱️ Duration</strong><br>
+                        ${stats.duration || 0}ms
+                    </div>
+                </div>
+            `;
+            document.getElementById('test-stats').innerHTML = statsHtml;
+        }
+    </script>
+    
+    <!-- Load Test Files -->
+    <script src="bookRequest.test.js"></script>
+    <script src="authentication.test.js"></script>
+    <script src="database.test.js"></script>
+    <script src="email.test.js"></script>
+    <script src="messaging.test.js"></script>
+    <script src="search.test.js"></script>
+    
+    <!-- Auto-run tests on page load (optional) -->
+    <script>
+        // Uncomment the line below to auto-run tests when page loads
+        // window.addEventListener('load', () => setTimeout(runAllTests, 1000));
+    </script>
+</body>
+</html>
