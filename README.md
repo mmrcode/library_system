@@ -195,7 +195,8 @@ library_system/
 **University**: University of Mysore  
 **Year**: 2025  
 
-## 📞 Support
+##  Support
+mmrcode1@gmail.com
 
 For technical support or feature requests, open an issue or contact the developer.
 
