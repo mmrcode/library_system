@@ -1,18 +1,17 @@
 <?php
 /**
  * Library Management System Setup Script
- * This script helps with initial setup and database creation
+ * Small guided wizard to create DB, import schema and sample data.
+ * Keeping code straightforward (so juniors can read it easily).
  * 
- * @author Mohammad Muqsit Raja
- * @reg_no BCA22739
- * @university University of Mysore
- * @year 2025
+ * author: Mohammad Muqsit Raja (BCA22739) – final year mini project vibes :)
+ * year: 2025
  */
 
 // Define constant to allow included files to run
 define('LIBRARY_SYSTEM', true);
 
-// Include configuration
+// include basic config – assuming these are filled in before running setup
 require_once 'includes/config.php';
 
 // Check if setup is already completed
@@ -22,7 +21,7 @@ if (file_exists($setupFile)) {
     exit();
 }
 
-$step = isset($_GET['step']) ? (int)$_GET['step'] : 1;
+$step = isset($_GET['step']) ? (int)$_GET['step'] : 1; // step based UI (1..4)
 $error = '';
 $success = '';
 
@@ -30,14 +29,14 @@ $success = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['create_database'])) {
         try {
-            // Create database connection without database name
+            // create database connection without selecting DB first
             $connection = new mysqli(DB_HOST, DB_USERNAME, DB_PASSWORD);
             
             if ($connection->connect_error) {
                 throw new Exception("Connection failed: " . $connection->connect_error);
             }
             
-            // Create database
+            // create database (if not already present) – simple approach
             $sql = "CREATE DATABASE IF NOT EXISTS " . DB_NAME;
             if ($connection->query($sql) === TRUE) {
                 $success = "Database created successfully!";
@@ -52,10 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif (isset($_POST['import_schema'])) {
         try {
-            require_once 'includes/database.php';
+            require_once 'includes/database.php'; // using our tiny DB wrapper
             $db = Database::getInstance();
             
-            // Read and execute schema file
+            // read and execute schema file – split by semicolon (basic but works)
             $schemaFile = 'database/library_db.sql';
             if (file_exists($schemaFile)) {
                 $sql = file_get_contents($schemaFile);
@@ -77,10 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif (isset($_POST['import_sample_data'])) {
         try {
-            require_once 'includes/database.php';
+            require_once 'includes/database.php'; // reusing same connection class here
             $db = Database::getInstance();
             
-            // Read and execute sample data file
+            // read and execute sample data file (includes default admin etc.)
             $dataFile = 'database/sample_data.sql';
             if (file_exists($dataFile)) {
                 $sql = file_get_contents($dataFile);
@@ -101,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = $e->getMessage();
         }
     } elseif (isset($_POST['complete_setup'])) {
-        // Create setup completion file
+        // create setup completion file – super lightweight flag
         file_put_contents($setupFile, date('Y-m-d H:i:s') . ' - Setup completed');
         $success = "Setup completed successfully! Redirecting to login page...";
         header("Refresh: 2; URL=index.php");

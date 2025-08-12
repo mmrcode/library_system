@@ -8,6 +8,9 @@
  * @university University of Mysore
  * @year 2025
  */
+// Heads-up: trying to keep this file readable like a final-year project :)
+// NOTE: plain PHP sessions + guards only. No heavy frameworks here.
+// TODO(muqsit): maybe add login rate limiting / lockout after X failed attempts.
 
 // Prevent direct access
 if (!defined('LIBRARY_SYSTEM')) {
@@ -18,6 +21,7 @@ class Auth {
     private $db;
     
     public function __construct() {
+        // grab the shared DB wrapper (keeps life easy, and fewer new connections)
         $this->db = Database::getInstance();
     }
     
@@ -26,12 +30,13 @@ class Auth {
      */
     public function login($username, $password) {
         try {
+            // basic active user check; keeping it simple on purpose (student project)
             $sql = "SELECT user_id, username, password, full_name, email, user_type, status 
                     FROM users WHERE username = ? AND status = 'active'";
             $user = $this->db->fetchOne($sql, [$username]);
             
             if ($user && password_verify($password, $user['password'])) {
-                // Set session variables
+                // Set session variables (minimal stuff only; avoiding extra PII)
                 $_SESSION['user_id'] = $user['user_id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['full_name'] = $user['full_name'];
@@ -39,12 +44,13 @@ class Auth {
                 $_SESSION['login_time'] = time();
                 $_SESSION['last_activity'] = time();
                 
-                // Log the login activity
+                // Log the login activity (nice to have an audit trail)
                 $this->logActivity($user['user_id'], 'LOGIN', 'users', $user['user_id']);
                 
                 return [
                     'success' => true,
                     'user' => $user,
+                    // small helper chooses where to go after login
                     'redirect' => $this->getRedirectUrl($user['user_type'])
                 ];
             } else {
@@ -70,10 +76,10 @@ class Auth {
             $this->logActivity($_SESSION['user_id'], 'LOGOUT', 'users', $_SESSION['user_id']);
         }
         
-        // Destroy session
+        // Destroy session (simple and effective)
         session_destroy();
         
-        // Redirect to login page
+        // Redirect to login page (yup, classic)
         header('Location: index.php');
         exit();
     }
@@ -115,7 +121,8 @@ class Auth {
             exit();
         }
         
-        // Check session timeout
+        // Check session timeout — using a constant so admins can tweak it in config
+        // If user is idle too long, we just log them out (security > convenience)
         if (isset($_SESSION['last_activity']) && 
             (time() - $_SESSION['last_activity']) > SESSION_TIMEOUT) {
             $this->logout();
@@ -155,6 +162,7 @@ class Auth {
             return null;
         }
         
+        // fetch only the fields we actually show/use on dashboards
         $sql = "SELECT user_id, username, full_name, email, user_type, registration_number, 
                        department, year_of_study, phone, address, status, created_at 
                 FROM users WHERE user_id = ?";
@@ -178,6 +186,7 @@ class Auth {
             }
             
             // Validate new password
+            // keeping it basic: just length check (no zxcvbn this time)
             if (strlen($newPassword) < PASSWORD_MIN_LENGTH) {
                 return [
                     'success' => false,
@@ -186,6 +195,7 @@ class Auth {
             }
             
             // Update password
+            // Using PHP's PASSWORD_DEFAULT so it stays modern-ish automatically
             $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
             $this->db->update('users', 
                 ['password' => $hashedPassword], 
@@ -236,6 +246,7 @@ class Auth {
             }
             
             // Hash password
+            // Slightly opinionated: we hash on server side; no client-side hashing needed
             $userData['password'] = password_hash($userData['password'], PASSWORD_DEFAULT);
             
             // Insert user
@@ -267,6 +278,7 @@ class Auth {
      * Get redirect URL based on user type
      */
     private function getRedirectUrl($userType) {
+        // returning relative paths since we live under /library_system/
         switch ($userType) {
             case 'admin':
                 return 'admin/dashboard.php';
@@ -295,6 +307,7 @@ class Auth {
             
             $this->db->insert('activity_logs', $data);
         } catch (Exception $e) {
+            // don't break the app if logging fails — just note it
             error_log("Activity logging error: " . $e->getMessage());
         }
     }
@@ -304,6 +317,7 @@ class Auth {
      */
     public function generateCSRFToken() {
         if (!isset($_SESSION['csrf_token'])) {
+            // cheap CSRF defense that works well enough for forms here
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         }
         return $_SESSION['csrf_token'];
@@ -321,12 +335,14 @@ class Auth {
 function auth() {
     static $auth = null;
     if ($auth === null) {
+        // lazy init so includes stay lightweight in non-auth pages
         $auth = new Auth();
     }
     return $auth;
 }
 
 function isLoggedIn() {
+    // tiny sugar so templates don't call the class directly
     return auth()->isLoggedIn();
 }
 

@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Library Management System - Unit Tests</title>
+    <!-- NOTE: kept this page simple so anyone can just open and run tests in the browser -->
     
     <!-- Mocha CSS -->
+    <!-- using CDN to avoid local setup pain -->
     <link href="https://unpkg.com/mocha@10.2.0/mocha.css" rel="stylesheet" />
     
     <!-- Custom Test Styles -->
@@ -17,7 +19,7 @@
             background-color: #f5f5f5;
         }
         
-        .test-header {
+        .test-header { /* splash banner with gradient just to make it look pro 😅 */
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
@@ -36,7 +38,7 @@
             opacity: 0.9;
         }
         
-        .test-controls {
+        .test-controls { /* quick actions for the suites */
             background: white;
             padding: 15px;
             border-radius: 8px;
@@ -67,7 +69,7 @@
             background: #da190b;
         }
         
-        #mocha {
+        #mocha { /* mocha mounts results here */
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -109,6 +111,7 @@
     <div class="test-header">
         <h1>🧪 Library Management System Tests</h1>
         <p>Comprehensive unit testing for all system components</p>
+        <!-- If this looks too fancy, sorry. I got carried away with CSS. -->
     </div>
     
     <div class="test-info">
@@ -119,9 +122,10 @@
             <span class="coverage-item tested">Database Operations</span>
             <span class="coverage-item tested">Email Functions</span>
             <span class="coverage-item tested">Messaging System</span>
-            <span class="coverage-item">Search Functions</span>
-            <span class="coverage-item">Admin Dashboard</span>
-            <span class="coverage-item">Student Portal</span>
+            <span class="coverage-item tested">Search Functions</span>
+            <span class="coverage-item tested">Integration Tests</span>
+            <span class="coverage-item tested">System Tests</span>
+            <span class="coverage-item tested">UAT Tests</span>
         </div>
     </div>
     
@@ -131,6 +135,9 @@
         <button onclick="runSpecificSuite('Authentication')">🔐 Auth Tests</button>
         <button onclick="runSpecificSuite('Database')">💾 Database Tests</button>
         <button onclick="runSpecificSuite('Email')">📧 Email Tests</button>
+        <button onclick="runSpecificSuite('Integration')">🔗 Integration Tests</button>
+        <button onclick="runSpecificSuite('System')">⚙️ System Tests</button>
+        <button onclick="runSpecificSuite('UAT')">👥 UAT Tests</button>
         <button onclick="clearResults()" class="danger">🗑️ Clear Results</button>
     </div>
     
@@ -145,16 +152,18 @@
     </div>
 
     <!-- Testing Libraries -->
-    <script src="https://unpkg.com/mocha@10.2.0/mocha.js"></script>
+    <script src="https://unpkg.com/mocha@10.2.0/mocha.js"></script> <!-- bdd-style runner -->
     <script src="https://unpkg.com/chai@4.3.7/chai.js"></script>
     <script src="https://unpkg.com/sinon@15.2.0/pkg/sinon.js"></script>
     
     <!-- Mock jQuery for testing -->
+    <!-- small dependency to simulate ajax in tests. live app is mostly vanilla/js fetch -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     
     <!-- Test Setup -->
     <script>
         // Setup Mocha
+        // keeping config conservative so tests remain stable on slower machines
         mocha.setup('bdd');
         const expect = chai.expect;
         const assert = chai.assert;
@@ -164,6 +173,7 @@
         mocha.slow(1000);
         
         // Global test utilities
+        // Not super fancy, just enough to mock ajax and DOM events we need for UI tests
         window.TestUtils = {
             mockAjax: function(response) {
                 return sinon.stub($, 'ajax').resolves(response);
@@ -190,6 +200,7 @@
         };
         
         // Test control functions
+        // these simply filter suites and then update a small stats section
         function runAllTests() {
             mocha.run(function(failures) {
                 updateTestStats(failures);
@@ -238,12 +249,17 @@
     </script>
     
     <!-- Load Test Files -->
+    <!-- yep, it's a lot… but this keeps coverage honest across modules -->
     <script src="bookRequest.test.js"></script>
     <script src="authentication.test.js"></script>
     <script src="database.test.js"></script>
     <script src="email.test.js"></script>
     <script src="messaging.test.js"></script>
     <script src="search.test.js"></script>
+    <script src="integration.test.js"></script>
+    <script src="system.test.js"></script>
+    <script src="uat.test.js"></script>
+    <script src="fineCalculation.test.js"></script>
     
     <!-- Auto-run tests on page load (optional) -->
     <script>

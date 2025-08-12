@@ -18,12 +18,12 @@ require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 require_once '../includes/request_functions.php';
 
-// Require admin access
+// only admins can touch requests dashboard
 requireAdmin();
 
 $currentUser = getCurrentUser();
 
-// Handle request processing
+// Handle request processing (single or bulk). Keeping it server-side for reliability
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {

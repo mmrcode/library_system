@@ -15,7 +15,7 @@ class BookRequestSystem {
     
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
-        // Initialize email system only if tables exist
+        // only boot email system if the tables are actually there (fresh setups won't have them yet)
         try {
             if ($this->tableExists('system_settings') && $this->tableExists('email_logs')) {
                 $this->emailSystem = new EmailNotificationSystem();
@@ -28,7 +28,8 @@ class BookRequestSystem {
     }
     
     /**
-     * Check if a table exists
+     * Tiny helper to check if a table exists in current DB.
+     * NOTE: using a quick SHOW TABLES which is fine for admin-side ops
      */
     private function tableExists($tableName) {
         try {
@@ -52,7 +53,7 @@ class BookRequestSystem {
         }
         
         try {
-            // Check if user has reached maximum pending requests
+            // simple guard: cap pending requests per user (configurable)
             $max_requests = $this->getSystemSetting('max_pending_requests', 5);
             $pending_count = $this->getUserPendingRequestsCount($user_id);
             
@@ -63,7 +64,7 @@ class BookRequestSystem {
                 ];
             }
             
-            // Check if user already has a pending request for this book
+            // avoid duplicates: if already pending/approved for same book, block new one
             $existing_request = $this->getUserBookRequest($user_id, $book_id);
             if ($existing_request && in_array($existing_request['status'], ['pending', 'approved'])) {
                 return [
@@ -116,7 +117,8 @@ class BookRequestSystem {
     }
     
     /**
-     * Process a book request (approve/reject)
+     * Process a book request (approve/reject/fulfilled)
+     * TODO: maybe move inventory updates here later if auto-issue flow is added
      */
     public function processBookRequest($request_id, $status, $admin_id, $admin_notes = '') {
         try {

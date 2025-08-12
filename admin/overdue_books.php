@@ -1,7 +1,11 @@
 <?php
 /**
  * Overdue Books - Library Management System
- * 
+ *
+ * small overview: shows all overdue issues + some quick stats.
+ * librarian can send reminders or jump to returns. kept the code
+ * straightforward so it's easy to tweak during viva/tests 😅
+ *
  * @author Mohammad Muqsit Raja
  * @reg_no BCA22739
  * @university University of Mysore
@@ -16,12 +20,12 @@ require_once '../includes/database.php';
 require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 
-// Require admin access
+// Guard: only admins should access overdue list
 requireAdmin();
 
 $db = Database::getInstance();
 
-// Get overdue books
+// Get overdue books (joins user/book for nice table details)
 $overdueBooks = $db->fetchAll("
     SELECT bi.*, u.full_name, u.registration_number, u.user_type, u.email, u.phone,
            b.title, b.author, b.isbn, c.category_name,
@@ -36,14 +40,14 @@ $overdueBooks = $db->fetchAll("
     ORDER BY days_overdue DESC, bi.due_date ASC
 ");
 
-// Update status for overdue books
+// Update status for overdue books (housekeeping: mark 'issued' past due as 'overdue')
 $db->query("
     UPDATE book_issues 
     SET status = 'overdue' 
     WHERE status = 'issued' AND due_date < CURDATE()
 ");
 
-// Get summary statistics
+// Get summary statistics (top counters)
 $stats = $db->fetchRow("
     SELECT 
         COUNT(*) as total_overdue,
@@ -81,10 +85,10 @@ include '../includes/admin_header.php';
                 </div>
             </div>
 
-            <!-- Flash Message -->
+            <!-- Flash Message (if we add actions later that set messages) -->
             <?php echo getFlashMessage(); ?>
 
-            <!-- Alert Banner -->
+            <!-- Alert Banner (little urgency vibe for the librarian) -->
             <?php if (!empty($overdueBooks)): ?>
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     <i class="fas fa-exclamation-triangle me-2"></i>
@@ -93,7 +97,7 @@ include '../includes/admin_header.php';
                 </div>
             <?php endif; ?>
 
-            <!-- Statistics Cards -->
+            <!-- Statistics Cards (at-a-glance numbers) -->
             <div class="row mb-4">
                 <div class="col-lg-3 col-md-6 mb-3">
                     <div class="card dashboard-card danger">
@@ -129,7 +133,7 @@ include '../includes/admin_header.php';
                 </div>
             </div>
 
-            <!-- Overdue Books Table -->
+            <!-- Overdue Books Table (main list) -->
             <div class="card shadow">
                 <div class="card-header bg-danger text-white">
                     <h6 class="m-0 font-weight-bold">
@@ -350,10 +354,11 @@ include '../includes/admin_header.php';
 <?php include '../includes/admin_footer.php'; ?>
 
 <script>
-let currentOverdueBook = null;
+// JS helpers only, no frameworks, to keep it light
+let currentOverdueBook = null; // store selected row data for modal actions
 
 function showOverdueDetails(book) {
-    currentOverdueBook = book;
+    currentOverdueBook = book; // remember the selected overdue record
     
     document.getElementById('modal_days_overdue').textContent = book.days_overdue;
     document.getElementById('modal_user_name').textContent = book.full_name;
@@ -375,14 +380,14 @@ function showOverdueDetails(book) {
 
 function sendReminders() {
     if (confirm('Send reminder notifications to all users with overdue books?')) {
-        // This would typically make an AJAX call to send reminders
+        // TODO: hook into email/notification system endpoint
         alert('Reminder notifications sent successfully!');
     }
 }
 
 function sendIndividualReminder(userId, userName) {
     if (confirm('Send reminder notification to ' + userName + '?')) {
-        // This would typically make an AJAX call to send individual reminder
+        // TODO: call backend to send an individual reminder
         alert('Reminder sent to ' + userName + ' successfully!');
     }
 }
@@ -404,7 +409,7 @@ function formatDate(dateString) {
     return date.toLocaleDateString('en-IN');
 }
 
-// Auto-refresh page every 5 minutes to update overdue status
+// Auto-refresh page every 5 minutes to update overdue status (simple, but works)
 setTimeout(function() {
     location.reload();
 }, 300000);

@@ -11,6 +11,7 @@
 define('LIBRARY_SYSTEM', true);
 
 // Include required files
+// stacking includes explicitly so it's obvious what this file needs
 require_once '../includes/config.php';
 require_once '../includes/database.php';
 require_once '../includes/auth.php';
@@ -19,27 +20,28 @@ require_once '../includes/student_functions.php';
 require_once '../includes/thumbnail_generator.php';
 
 // Require student access
+// guard: students only (admins have their own dashboard)
 requireStudent();
 
-$db = Database::getInstance();
+$db = Database::getInstance(); // shared DB wrapper
 $currentUser = getCurrentUser();
 
 // Get student statistics
 $userId = $currentUser['user_id'];
 
-// Active issues
+// Active issues (currently issued)
 $activeIssues = $db->fetchColumn("SELECT COUNT(*) FROM book_issues WHERE user_id = ? AND status = 'issued'", [$userId]) ?? 0;
 
-// Overdue books
+// Overdue books — this one gets highlighted in the UI
 $overdueBooks = $db->fetchColumn("SELECT COUNT(*) FROM book_issues WHERE user_id = ? AND status = 'overdue'", [$userId]) ?? 0;
 
-// Total books issued (all time)
+// Total books issued (all time) — just for a feel-good stat
 $totalIssued = $db->fetchColumn("SELECT COUNT(*) FROM book_issues WHERE user_id = ?", [$userId]) ?? 0;
 
-// Pending fines
+// Pending fines (₹); formatted later, keeping number raw here
 $pendingFines = $db->fetchColumn("SELECT COALESCE(SUM(fine_amount), 0) FROM fines WHERE user_id = ? AND status = 'pending'", [$userId]) ?? 0;
 
-// Get book requests for the student
+// Get book requests for the student (last 5)
 $bookRequests = $db->fetchAll("
     SELECT br.*, b.title, b.author, b.isbn, b.available_copies,
            u.full_name as processed_by_name,
@@ -55,11 +57,11 @@ $bookRequests = $db->fetchAll("
     JOIN books b ON br.book_id = b.book_id
     LEFT JOIN users u ON br.processed_by = u.user_id
     WHERE br.user_id = ?
-    ORDER BY br.request_date DESC
+    ORDER BY br.request_date DESC -- newest first so students see recent action
     LIMIT 5
 ", [$userId]) ?? [];
 
-// Current issued books
+// Current issued books (shows days remaining)
 $currentBooks = $db->fetchAll("
     SELECT bi.*, b.title, b.author, b.isbn, c.category_name,
            DATEDIFF(bi.due_date, CURDATE()) as days_remaining
@@ -71,7 +73,7 @@ $currentBooks = $db->fetchAll("
     LIMIT 5
 ", [$userId]);
 
-// Recent activity
+// Recent activity — tiny timeline of what happened
 $recentActivity = $db->fetchAll("
     SELECT bi.*, b.title, b.author, 
            CASE 
@@ -87,6 +89,7 @@ $recentActivity = $db->fetchAll("
 ", [$userId]);
 
 // Recommended books (based on user's reading history)
+// NOTE: basic heuristic in student_functions.php, can be improved later
 $recommendedBooks = getStudentRecommendedBooks($userId, 6);
 
 $pageTitle = 'Student Dashboard';
@@ -98,6 +101,7 @@ include '../includes/student_header.php';
         <!-- Main Content -->
         <main class="col-12 px-md-4">
             <!-- Welcome Section -->
+            <!-- keeping this friendly; students usually land here first after login -->
             <div class="d-flex flex-column align-items-center text-center pt-3 pb-2 mb-3 border-bottom">
                 <div>
                     <h1 class="h2">
@@ -197,6 +201,7 @@ include '../includes/student_header.php';
             </div>
 
             <!-- Main Dashboard Content -->
+            <!-- 2-column layout: left = activity, right = helpful links/cards -->
             <div class="row g-4">
                 <!-- Main Content Column (Wider) -->
                 <div class="col-lg-8">
@@ -562,6 +567,7 @@ include '../includes/student_header.php';
 
 <script>
 // Auto-refresh dashboard every 10 minutes
+// feels a bit aggressive, but helps keep counts fresh if user stays idle
 setTimeout(function() {
     location.reload();
 }, 600000);

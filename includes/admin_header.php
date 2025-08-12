@@ -13,8 +13,9 @@ if (!defined('LIBRARY_SYSTEM')) {
     die('Direct access not permitted');
 }
 
-$currentUser = getCurrentUser();
-$libraryName = getSystemSetting('library_name', 'Digital Library');
+$currentUser = getCurrentUser(); // pulling the logged-in admin for navbar
+$libraryName = getSystemSetting('library_name', 'Digital Library'); // fallback just in case settings table is empty
+// NOTE: keeping header minimal so pages load fast; heavy stuff goes in pages
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,6 +25,7 @@ $libraryName = getSystemSetting('library_name', 'Digital Library');
     <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) . ' - ' : ''; ?><?php echo htmlspecialchars($libraryName); ?> Admin</title>
     
     <!-- Bootstrap CSS -->
+    <!-- CDN is fine for our use case; avoids bundling headaches -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -31,7 +33,7 @@ $libraryName = getSystemSetting('library_name', 'Digital Library');
     <link href="../assets/css/style.css" rel="stylesheet">
     
     <style>
-        .main-content {
+        .main-content { /* content wrapper for pages (paired with sidebar) */
             margin-left: 280px;
             transition: margin-left 0.3s ease;
         }
@@ -47,7 +49,7 @@ $libraryName = getSystemSetting('library_name', 'Digital Library');
     <!-- Top Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
         <div class="container-fluid">
-            <button class="btn btn-outline-light me-3 d-md-none" type="button" id="sidebarToggle">
+            <button class="btn btn-outline-light me-3 d-md-none" type="button" id="sidebarToggle"> <!-- sidebar toggler for mobile -->
                 <i class="fas fa-bars"></i>
             </button>
             
@@ -58,6 +60,7 @@ $libraryName = getSystemSetting('library_name', 'Digital Library');
             
             <div class="navbar-nav ms-auto">
                 <!-- Notifications Dropdown -->
+                <!-- Placeholder counts/icons for now; can wire to real notifications later -->
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
                         <i class="fas fa-bell"></i>
@@ -74,6 +77,7 @@ $libraryName = getSystemSetting('library_name', 'Digital Library');
                 </div>
                 
                 <!-- User Dropdown -->
+                <!-- shows current admin name + quick links -->
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                         <i class="fas fa-user-circle me-1"></i>

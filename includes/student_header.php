@@ -13,9 +13,10 @@ if (!defined('LIBRARY_SYSTEM')) {
     die('Direct access not permitted');
 }
 
-$currentUser = getCurrentUser();
-$libraryName = getSystemSetting('library_name', 'Digital Library');
-$db = Database::getInstance();
+// pull basic context used across most student pages
+$currentUser = getCurrentUser(); // who is logged in rn
+$libraryName = getSystemSetting('library_name', 'Digital Library'); // fallback if not set
+$db = Database::getInstance(); // reusing the shared DB wrapper
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -29,6 +30,7 @@ $db = Database::getInstance();
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
+    <!-- keeping separate student.css so we can tweak styles without touching admin -->
     <link href="../assets/css/style.css" rel="stylesheet">
     <link href="../assets/css/student.css" rel="stylesheet">
 </head>
@@ -72,6 +74,7 @@ $db = Database::getInstance();
                 
                 <ul class="navbar-nav ms-auto flex-wrap">
                     <!-- Notifications -->
+                    <!-- shows overdue + due-soon alerts; not too noisy on purpose -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-bell"></i>
@@ -105,6 +108,7 @@ $db = Database::getInstance();
                     </li>
                     
                     <!-- User Menu -->
+                    <!-- profile, password, logout... standard stuff -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user-circle"></i><span class="d-none d-lg-inline ms-1"><?php echo htmlspecialchars($currentUser['full_name']); ?></span>

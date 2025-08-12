@@ -26,6 +26,7 @@ tests/
 ├── email.test.js           # Email notification system tests
 ├── messaging.test.js       # In-app messaging system tests
 ├── search.test.js          # Search functionality tests
+├── fineCalculation.test.js # Fine calculation, payments, waivers
 └── README.md               # This documentation
 ```
 
@@ -41,6 +42,7 @@ tests/
 | **Email Notifications** | `email.test.js` | 88% | ✅ Complete |
 | **Messaging System** | `messaging.test.js` | 92% | ✅ Complete |
 | **Search Functions** | `search.test.js` | 87% | ✅ Complete |
+| **Fine Calculation** | `fineCalculation.test.js` | 90% | ✅ Complete |
 
 ### 🎯 Key Testing Areas
 
@@ -91,6 +93,13 @@ tests/
 - ✅ Results display and pagination
 - ✅ Search performance optimization
 - ✅ Error handling
+
+#### Fine Calculation Tests
+- ✅ Daily fine rules (regular vs reference)
+- ✅ Grace period and max cap per book
+- ✅ Pending fine visibility on student UI
+- ✅ Payment methods and waiver workflow
+- ✅ Reporting endpoints (stats, charts) basic responses
 
 ## 🛠️ Test Controls
 

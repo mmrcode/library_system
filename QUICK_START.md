@@ -11,6 +11,7 @@
 - **Setup Page**: http://localhost/library_system/setup.php
 - **Admin Login**: http://localhost/library_system/admin/dashboard.php
 - **Student Login**: http://localhost/library_system/student/dashboard.php
+ - **Tests Runner**: http://localhost/library_system/tests/
 
 ### Database Management
 - **phpMyAdmin**: http://localhost/phpmyadmin
@@ -52,9 +53,12 @@
 2. **Run Setup**
    - Visit: http://localhost/library_system/setup.php
    - Follow the 4-step wizard
-   - **Important**: After initial setup, run: http://localhost/library_system/setup_request_system.php
-     - This will set up the book request system tables
+   - **Important A**: After initial setup, run: http://localhost/library_system/setup_request_system.php
+     - Sets up the Book Request + Messaging system tables (book_requests, messages, notifications, email_logs, system_settings)
      - Must be logged in as admin
+   - **Important B**: Also run: http://localhost/library_system/setup_fine_system.php
+     - Sets up the Fine Management tables (fines, fine_transactions)
+     - Configures defaults used by reports
 
 3. **Verify Email Configuration**
    - Navigate to Admin Panel > System Settings
@@ -64,6 +68,7 @@
 4. **Access System**
    - Visit: http://localhost/library_system/
    - Login with admin credentials
+   - Open the test runner (optional): http://localhost/library_system/tests/
 
 ## 📁 Project Structure
 
@@ -108,6 +113,8 @@ library_system/
   - Broadcast announcements
 - ✅ Issue & Return Processing
 - ✅ Fine Management
+  - Payment/waiver history, pending fines display
+  - Admin fine dashboard and detailed charts
 - ✅ Reports & Analytics
 - ✅ Category Management
 - ✅ System Settings
@@ -150,6 +157,7 @@ library_system/
 - `categories` - Book categories
 - `book_issues` - Issue/return tracking
 - `fines` - Fine management
+ - `fine_transactions` - Fine payments/waivers
 - `system_settings` - Configuration
 - `activity_logs` - System logs
 
@@ -214,6 +222,10 @@ library_system/
    - Ensure `setup_request_system.php` was run
    - Check database tables: book_requests, messages, notifications
    - Verify user roles and permissions
+6. **Fine system not showing data**
+   - Ensure `setup_fine_system.php` was run
+   - Try adding sample issues/returns to generate fines
+   - Check `fines` and `fine_transactions` tables
 
 ### Error Logs
 - **Apache**: `xampp/apache/logs/error.log`
@@ -232,6 +244,7 @@ library_system/
 1. **Remove Setup Files**
    - Delete `setup.php` for security
    - Delete `setup_completed.txt`
+   - Optionally remove `setup_request_system.php` and `setup_fine_system.php` (keep backups for re-install)
 
 2. **Change Default Passwords**
    - Update admin password

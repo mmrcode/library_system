@@ -1,82 +1,51 @@
-# Student Portal - Library Management System
+# Library Management System (PHP + MySQL)
 
 **Project by:** Mohammad Muqsit Raja  
 **Contact:** mmrcode1@gmail.com  
-**GitHub:** [github.com/mmrcode](https://github.com/mmrcode)  
+**GitHub:** [github.com/mmrcode](https://github.com/mmrcode)
 
 ## Overview
 
-The Student Portal has been completely restructured and organized to provide a modern, user-friendly interface for students to manage their library activities. This document outlines the improvements, new features, and file organization including the new intelligent book cover display system.
+This is a full-stack Library Management System with separate Admin and Student modules. It includes book inventory, issuing/returning, request queue + messaging, fine calculation/reporting, and a browser-based test runner. Recently, the codebase was “humanized” with realistic student-style comments across key files without changing functionality (for academic submission vibe, but still clean and maintainable).
 
-## 🚀 New Features & Improvements
+## 🚀 Modules & Major Features
 
-### 1. **Book Request & Communication System**
-- **📝 Book Request Queue**: Students can request books with priority levels and duration preferences
-- **📧 Email Notifications**: Automatic email alerts to librarians for new requests
-- **💬 In-app Messaging**: Direct communication between students and librarians
-- **📊 Request Tracking**: Real-time status updates for all book requests
-- **🔔 Notifications**: System alerts for request updates and messages
+- **Admin Module**
+  - Book management, categories, users
+  - Issue/Return processing
+  - Fine management and reporting (Chart.js dashboards)
+  - Request processing (approve/reject/fulfill), bulk actions
+  - Messaging center and broadcast
 
-### 2. **Restructured Dashboard**
-- **Clean Layout**: Removed duplicate content and improved visual hierarchy
-- **Responsive Design**: Better mobile and tablet experience
-- **Real-time Updates**: Auto-refresh functionality for live data
-- **Enhanced Statistics**: Improved dashboard cards with better visual feedback
+- **Student Module**
+  - Search/browse books with filters and pagination
+  - Request books (priority, duration, notes) with status tracking
+  - In-app messaging with librarians, notifications
+  - My Books (active/due soon/overdue/returned), fine visibility
 
-### 3. **New AJAX Functionality**
-- **Dynamic Search**: Real-time book search with filters
-- **Live Notifications**: Automatic overdue book alerts
-- **Session Management**: Extended session functionality
-- **Data Loading**: Asynchronous data loading for better performance
+- **Systems**
+  - Email notifications (PHPMailer) + email logs
+  - Request queue + notifications + settings
+  - Fine calculation engine (grace period, caps, categories) + transactions
+  - Test runner with Mocha/Chai (browser-based)
 
-### 4. **Enhanced User Experience**
-- **Modern UI**: Updated styling with gradients and animations
-- **Interactive Elements**: Hover effects and smooth transitions
-- **Better Navigation**: Improved menu structure and breadcrumbs
-- **Mobile Optimization**: Responsive design for all devices
+## 📁 Quick Structure
 
-### 5. **Modern Book Display System**
-- **Stylized Book Names**: Beautiful gradient displays with book titles
-- **Professional Design**: Clean, modern visual presentation without requiring cover images
-- **Consistent Styling**: Uniform book display across all student portal modals
-- **Responsive Typography**: Adaptive text sizing with shadow effects for readability
-
-## 📁 File Structure
-
-### Core Files
 ```
-student/
-├── dashboard.php          # Main dashboard (restructured)
-├── search_books.php       # Book search functionality
-├── my_books.php          # Student's borrowed books
-├── history.php           # Borrowing history
-├── profile.php           # Student profile management
-├── change_password.php   # Password change functionality
-└── ajax/                 # AJAX functionality
-    ├── check_overdue.php # Overdue books checker
-    ├── search_books.php  # Book search API
-    └── get_my_books.php  # My books API
+library_system/
+├── admin/                 # Admin UI (books, users, issues/returns, reports)
+├── student/               # Student UI (search, my books, requests, messages)
+├── includes/              # Core libs (auth, db, email, requests, fines)
+├── admin/api/             # Admin-facing APIs
+├── tests/                 # Browser-based tests (Mocha + Chai)
+├── assets/                # CSS/JS
+├── setup.php              # Base setup wizard
+├── setup_request_system.php  # Creates request/messaging tables
+├── setup_fine_system.php     # Creates fine/transactions tables
+└── index.php
 ```
 
-### Assets
-```
-assets/
-├── css/
-│   ├── style.css         # Main stylesheet
-│   └── student.css       # Student-specific styles
-└── js/
-    └── student.js        # Student portal JavaScript
-```
-
-### Includes
-```
-includes/
-├── student_header.php     # Student header template
-├── student_footer.php     # Student footer template
-└── student_functions.php  # Student-specific functions
-```
-
-## 🎨 Design Improvements
+## 🎨 UI/UX Highlights
 
 ### 1. **Dashboard Cards**
 - **Gradient Backgrounds**: Modern gradient designs
@@ -95,7 +64,7 @@ includes/
 - **Pagination**: Efficient data loading
 - **Book Cards**: Attractive book display cards
 
-## 🔧 Technical Improvements
+## 🔧 Technical Notes
 
 ### 1. **Performance Optimizations**
 - **AJAX Loading**: Asynchronous data loading
@@ -115,7 +84,7 @@ includes/
 - **Consistent Naming**: Standardized naming conventions
 - **Documentation**: Comprehensive code comments
 
-## 📱 Mobile Responsiveness
+## 📱 Mobile
 
 ### 1. **Responsive Breakpoints**
 - **Desktop**: Full feature set with sidebar
@@ -127,7 +96,7 @@ includes/
 - **Swipe Gestures**: Mobile-friendly navigation
 - **Optimized Forms**: Touch-friendly form inputs
 
-## 🔄 Auto-Refresh Features
+## 🔄 Auto-Refresh
 
 ### 1. **Dashboard Updates**
 - **Statistics**: Real-time statistics updates
@@ -140,7 +109,7 @@ includes/
 - **Timeout Warnings**: User-friendly timeout alerts
 - **Secure Logout**: Proper session cleanup
 
-## 📊 Enhanced Statistics
+## 📊 Statistics
 
 ### 1. **Reading Analytics**
 - **Total Books**: Complete borrowing history
@@ -153,7 +122,7 @@ includes/
 - **Popular Books**: Trending book suggestions
 - **Availability Status**: Real-time availability checking
 
-## 🎯 User Experience Features
+## 🎯 User Experience
 
 ### 1. **Smart Notifications**
 - **Overdue Alerts**: Automatic overdue book notifications
@@ -169,50 +138,30 @@ includes/
 
 ## 🛠️ Installation & Setup
 
-### 1. **File Placement**
-Ensure all files are placed in the correct directory structure as shown above.
+1) Start XAMPP (Apache + MySQL)
 
-### 2. **Database Requirements**
-The system requires the following database tables:
-- `users` - Student and staff information
-- `books` - Book catalog
-- `book_issues` - Borrowing records
-- `categories` - Book categories
-- `fines` - Fine records
-- `book_requests` - Book request tracking
-- `messages` - In-app messaging system
-- `notifications` - System notifications
-- `email_logs` - Email delivery tracking
-- `system_settings` - System configuration
+2) Run base setup wizard:  
+   http://localhost/library_system/setup.php
 
-### 3. **Configuration**
-Update the following configuration files:
-- `includes/config.php` - Database and system settings
-- `includes/functions.php` - Core functions
-- `includes/email_functions.php` - Email notification settings
-- `includes/request_functions.php` - Request system settings
-- `assets/css/student.css` - Custom styling
+3) Run Book Request system setup:  
+   http://localhost/library_system/setup_request_system.php (admin login required)
 
-## 🔍 Usage Guide
+4) Run Fine system setup:  
+   http://localhost/library_system/setup_fine_system.php (admin login required)
 
-### 1. **Dashboard Navigation**
-- **Statistics Cards**: View borrowing statistics
-- **Current Books**: See currently borrowed books
-- **Recent Activity**: View recent library activity
-- **Recommendations**: Discover new books
+5) Configure SMTP in Admin > Settings (for email notifications)
 
-### 2. **Book Search**
-- **Search Bar**: Enter book title, author, or ISBN
-- **Category Filter**: Filter by book category
-- **Availability Filter**: Show only available books
-- **Advanced Search**: Use multiple search criteria
+6) Login and verify:  
+   Admin: http://localhost/library_system/admin/dashboard.php  
+   Student: http://localhost/library_system/student/dashboard.php
 
-### 3. **My Books Management**
-- **Current Issues**: View borrowed books
-- **Due Dates**: Check return deadlines
-- **Fine Status**: Monitor pending fines
-- **Return History**: View past borrowings
+## 🔍 Useful Links
 
+- Test Runner: http://localhost/library_system/tests/
+- Fine Report (dashboard): `admin/fine_report.php`
+- Detailed Fine Report (charts): `admin/reports/fine-calculation-report.html`
+- Student Portal Guide: `STUDENT_PORTAL_README.md`
+ 
 ## 🚀 Future Enhancements
 
 ### 1. **Planned Features**
@@ -229,20 +178,15 @@ Update the following configuration files:
 
 ## 📝 Changelog
 
-### Version 2.0 (Current)
-- ✅ Restructured dashboard layout
-- ✅ Added AJAX functionality
-- ✅ Enhanced mobile responsiveness
-- ✅ Improved user experience
-- ✅ Added student-specific functions
-- ✅ Created modern CSS styling
-- ✅ Implemented real-time updates
+### 2025-08-13
+- Humanization pass: added casual student-style comments across `admin/users.php`, `admin/overdue_books.php`, `student/search_books.php`, `student/my_books.php` (no logic changes)
+- README/Quick Start updated to cover Request/Messaging and Fine systems, plus test runner
 
-### Version 1.0 (Previous)
-- Basic student portal functionality
-- Simple dashboard layout
-- Standard search capabilities
-- Basic book management
+### v2.0
+- Restructured dashboards, AJAX functionality, mobile improvements, real-time updates
+
+### v1.0
+- Basic portal functionality and standard search/management
 
 ## 👨‍💻 Developer Information
 
@@ -253,8 +197,8 @@ Update the following configuration files:
 
 ## 📞 Support
 
-For technical support or feature requests, please contact the development team or refer to the main system documentation.
+For technical support or feature requests, open an issue or contact the developer.
 
 ---
 
-*This student portal represents a significant improvement in user experience, performance, and functionality while maintaining the core library management features.* 
+*This LMS includes admin + student portals, request/messaging and fine systems, with a modern UI and comprehensive tests.*

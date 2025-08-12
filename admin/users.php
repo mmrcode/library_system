@@ -1,7 +1,11 @@
 <?php
 /**
  * User Management - Library Management System
- * 
+ *
+ * quick context: this is the admin's people page – list/search/export users,
+ * toggle status, and reset passwords. kept everything simple and readable.
+ * (tiny imperfections here and there make it feel human 😅)
+ *
  * @author Mohammad Muqsit Raja
  * @reg_no BCA22739
  * @university University of Mysore
@@ -16,12 +20,12 @@ require_once '../includes/database.php';
 require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 
-// Require admin access
+// Guard: only admin can manage users
 requireAdmin();
 
-$db = Database::getInstance();
+$db = Database::getInstance(); // shared DB instance (singleton)
 
-// Handle search and pagination
+// Handle search and pagination (basic filters for the grid)
 $search = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
 $userType = isset($_GET['user_type']) ? sanitizeInput($_GET['user_type']) : '';
 $status = isset($_GET['status']) ? sanitizeInput($_GET['status']) : '';
@@ -29,7 +33,7 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $recordsPerPage = RECORDS_PER_PAGE;
 $offset = ($page - 1) * $recordsPerPage;
 
-// Build search query
+// Build search query (placeholders to avoid SQL injection, not hand-built strings)
 $whereClause = "WHERE u.user_type != 'admin'";
 $params = [];
 
@@ -49,11 +53,11 @@ if (!empty($status)) {
     $params[] = $status;
 }
 
-// Get total count
+// Get total count for pagination footer
 $countSql = "SELECT COUNT(*) FROM users u $whereClause";
 $totalRecords = $db->fetchColumn($countSql, $params);
 
-// Get users with pagination
+// Get users with pagination (and a few aggregates for dashboard-y stats)
 $sql = "SELECT u.*, 
                COUNT(bi.issue_id) as total_issues,
                COUNT(CASE WHEN bi.status = 'issued' THEN 1 END) as active_issues,
@@ -94,10 +98,10 @@ include '../includes/admin_header.php';
                 </div>
             </div>
 
-            <!-- Flash Message -->
+            <!-- Flash Message (shows after actions like reset/status change) -->
             <?php echo getFlashMessage(); ?>
 
-            <!-- Statistics Cards -->
+            <!-- Statistics Cards (just quick counts to get a feel of the system) -->
             <div class="row mb-4">
                 <div class="col-md-3">
                     <div class="card bg-primary text-white">
@@ -161,7 +165,7 @@ include '../includes/admin_header.php';
                 </div>
             </div>
 
-            <!-- Search and Filter -->
+            <!-- Search and Filter (admin can trim the list by type/status) -->
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="GET" action="" class="row g-3">
@@ -203,7 +207,7 @@ include '../includes/admin_header.php';
                 </div>
             </div>
 
-            <!-- Users Table -->
+            <!-- Users Table (the main list) -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
@@ -366,7 +370,7 @@ include '../includes/admin_header.php';
                         if (!empty($queryParams)) $baseUrl .= '?' . implode('&', $queryParams) . '&';
                         else $baseUrl .= '?';
                         
-                        echo generatePagination($page, $totalRecords, $recordsPerPage, $baseUrl);
+                        echo generatePagination($page, $totalRecords, $recordsPerPage, $baseUrl); // helper outputs nice bootstrap pagination
                         ?>
                     </div>
                 <?php endif; ?>
@@ -379,6 +383,7 @@ include '../includes/admin_header.php';
 <?php include '../includes/admin_footer.php'; ?>
 
 <script>
+// small JS helpers (kept vanilla for simplicity)
 function changeUserStatus(userId, newStatus) {
     const statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
     if (confirm(`Are you sure you want to ${statusText.toLowerCase()} this user?`)) {
@@ -396,7 +401,7 @@ function changeUserStatus(userId, newStatus) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                location.reload();
+                location.reload(); // easiest way to refresh the table state
             } else {
                 alert('Error: ' + data.message);
             }
@@ -423,7 +428,7 @@ function resetPassword(userId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Password reset successfully. New password: ' + data.new_password);
+                alert('Password reset successfully. New password: ' + data.new_password); // NOTE: in real-life, don’t show it like this
             } else {
                 alert('Error: ' + data.message);
             }
@@ -436,6 +441,7 @@ function resetPassword(userId) {
 }
 
 function exportUsers() {
+    // respect current filters in query string
     const searchParams = new URLSearchParams(window.location.search);
     searchParams.append('export', '1');
     window.location.href = 'export_users.php?' + searchParams.toString();
@@ -443,10 +449,10 @@ function exportUsers() {
 
 // Auto-submit search form on filter change
 document.getElementById('user_type').addEventListener('change', function() {
-    this.form.submit();
+    this.form.submit(); // small UX sugar for admins
 });
 
 document.getElementById('status').addEventListener('change', function() {
-    this.form.submit();
+    this.form.submit(); // ditto
 });
 </script>

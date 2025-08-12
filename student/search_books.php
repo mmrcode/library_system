@@ -1,7 +1,11 @@
 <?php
 /**
  * Student Search Books - Library Management System
- * 
+ *
+ * quick note: this is the main search screen for students. we kept
+ * filters basic (search + category + sort) and grid layout for books.
+ * also wired a request flow via modal, so students can ping librarian.
+ *
  * @author Mohammad Muqsit Raja
  * @reg_no BCA22739
  * @university University of Mysore
@@ -19,13 +23,13 @@ require_once '../includes/student_functions.php';
 require_once '../includes/thumbnail_generator.php';
 require_once '../includes/request_functions.php';
 
-// Require student access
+// Guard: only logged-in students allowed here
 requireStudent();
 
 $db = Database::getInstance();
 $currentUser = getCurrentUser();
 
-// Handle AJAX book request
+// Handle AJAX book request (the modal posts here directly)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'request_book') {
     header('Content-Type: application/json');
     
@@ -49,16 +53,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         } elseif ($currentUser && isset($currentUser['id'])) {
             $user_id = (int)$currentUser['id'];
         } else {
-            // For testing purposes, use a default user ID (you should replace this with proper authentication)
+            // For testing/dev: fallback to a known user (NOTE: prod should always have session)
             $user_id = 1; // Default student user ID
         }
         
-        // Check if book_requests table exists, create if not
+        // Check if book_requests table exists, create if not (saves setup pain during demos)
         $conn = $db->getConnection();
         $tableCheck = $conn->query("SHOW TABLES LIKE 'book_requests'");
         
         if (!$tableCheck || $tableCheck->num_rows == 0) {
-            // Create the book_requests table
+            // Create the book_requests table (minimal columns for this feature)
             $createTableSQL = "
                 CREATE TABLE book_requests (
                     request_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -81,44 +85,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             ";
             
             if (!$conn->query($createTableSQL)) {
+                // If the table creation fails, send an error response
                 echo json_encode(['success' => false, 'message' => 'Failed to create book_requests table: ' . $conn->error]);
                 exit;
             }
         }
         
-        // Insert the book request directly
-        $stmt = $conn->prepare("
-            INSERT INTO book_requests (book_id, user_id, priority, request_type, requested_duration, notes) 
-            VALUES (?, ?, ?, 'issue', ?, ?)
-        ");
+        // Insert the book request directly (simple insert, status starts as 'pending')
+        $stmt = $conn->prepare("\n            INSERT INTO book_requests (book_id, user_id, priority, request_type, requested_duration, notes) \n            VALUES (?, ?, ?, 'issue', ?, ?)\n        ");
         
         if (!$stmt) {
+            // If the prepare fails, send an error response
             echo json_encode(['success' => false, 'message' => 'Database prepare error: ' . $conn->error]);
             exit;
         }
         
+        // Bind the parameters (book ID, user ID, priority, duration, and notes)
         $stmt->bind_param("iisis", $book_id, $user_id, $priority, $duration, $notes);
         
         if ($stmt->execute()) {
+            // If the insert succeeds, send a success response with the request ID
             echo json_encode([
                 'success' => true, 
                 'message' => 'Book request submitted successfully! You will be notified when the librarian responds.',
                 'request_id' => $conn->insert_id
             ]);
         } else {
+            // If the insert fails, send an error response
             echo json_encode(['success' => false, 'message' => 'Failed to submit request: ' . $stmt->error]);
         }
         
+        // Close the statement (good practice!)
         $stmt->close();
         
     } catch (Exception $e) {
+        // If any exception occurs, send an error response
         echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
     
+    // Exit the script (we're done here!)
     exit;
 }
 
-// Get search parameters
+// Get search parameters (pretty standard form -> query mapping)
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $category = isset($_GET['category']) ? (int)$_GET['category'] : 0;
 $sort = isset($_GET['sort']) ? $_GET['sort'] : 'title';
@@ -126,24 +135,27 @@ $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 12; // Books per page
 $offset = ($page - 1) * $limit;
 
-// Build search query
+// Build search query (use placeholders; we don't build raw strings)
 $whereConditions = ["b.status = 'active'"];
 $params = [];
 
 if (!empty($search)) {
+    // Add a condition for searching by title, author, ISBN, or publisher
     $whereConditions[] = "(b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ? OR b.publisher LIKE ?)";
     $searchTerm = "%{$search}%";
     $params = array_merge($params, [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
 }
 
 if ($category > 0) {
+    // Add a condition for filtering by category
     $whereConditions[] = "b.category_id = ?";
     $params[] = $category;
 }
 
+// Join the conditions with AND (we want all conditions to be true)
 $whereClause = implode(' AND ', $whereConditions);
 
-// Sort options
+// Define sort options (limited to whitelisted keys for safety)
 $sortOptions = [
     'title' => 'b.title ASC',
     'author' => 'b.author ASC',
@@ -151,40 +163,33 @@ $sortOptions = [
     'available' => 'b.available_copies DESC'
 ];
 
+// Get the sort order (default to title if not specified)
 $orderBy = isset($sortOptions[$sort]) ? $sortOptions[$sort] : $sortOptions['title'];
 
-// Get total count
-$totalBooks = $db->fetchColumn("
-    SELECT COUNT(*) 
-    FROM books b 
-    LEFT JOIN categories c ON b.category_id = c.category_id 
-    WHERE {$whereClause}
-", $params) ?? 0;
+// Get the total count of books (for pagination)
+$totalBooks = $db->fetchColumn("\n    SELECT COUNT(*) \n    FROM books b \n    LEFT JOIN categories c ON b.category_id = c.category_id \n    WHERE {$whereClause}\n", $params) ?? 0;
 
+// Calculate the total number of pages
 $totalPages = ceil($totalBooks / $limit);
 
-// Get books
-$books = $db->fetchAll("
-    SELECT b.*, c.category_name,
-           CASE WHEN b.available_copies > 0 THEN 'Available' ELSE 'Not Available' END as availability_status
-    FROM books b
-    LEFT JOIN categories c ON b.category_id = c.category_id
-    WHERE {$whereClause}
-    ORDER BY {$orderBy}
-    LIMIT {$limit} OFFSET {$offset}
-", $params);
+// Get the books (includes category and availability mini flag)
+$books = $db->fetchAll("\n    SELECT b.*, c.category_name,\n           CASE WHEN b.available_copies > 0 THEN 'Available' ELSE 'Not Available' END as availability_status\n    FROM books b\n    LEFT JOIN categories c ON b.category_id = c.category_id\n    WHERE {$whereClause}\n    ORDER BY {$orderBy}\n    LIMIT {$limit} OFFSET {$offset}\n", $params);
 
 // Get categories for filter
 $categories = $db->fetchAll("SELECT * FROM categories ORDER BY category_name");
 
+// Set the page title
 $pageTitle = 'Search Books';
+
+// Include the student header
 include '../includes/student_header.php';
 ?>
 
+<!-- Container for the search results -->
 <div class="container-fluid">
     <div class="row">
         <main class="col-12 px-md-4">
-            <!-- Page Header -->
+            <!-- Page Header (title + back to dashboard) -->
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                 <h1 class="h2">
                     <i class="fas fa-search me-2"></i>Search Books
@@ -198,10 +203,10 @@ include '../includes/student_header.php';
                 </div>
             </div>
 
-            <!-- Flash Message -->
+            <!-- Flash Message (if any) -->
             <?php echo getFlashMessage(); ?>
 
-            <!-- Search Form -->
+            <!-- Search Form (filters: keyword + category + sort) -->
             <div class="card shadow mb-4">
                 <div class="card-body">
                     <form method="GET" action="" class="row g-3">
@@ -244,7 +249,7 @@ include '../includes/student_header.php';
                 </div>
             </div>
 
-            <!-- Search Results -->
+            <!-- Search Results (heading + total hits) -->
             <div class="row mb-3">
                 <div class="col-md-6">
                     <h5 class="mb-0">
@@ -351,7 +356,7 @@ include '../includes/student_header.php';
                 <?php endif; ?>
 
             <?php else: ?>
-                <!-- No Results -->
+                <!-- No Results (empty state) -->
                 <div class="text-center py-5">
                     <i class="fas fa-search fa-4x text-muted mb-3"></i>
                     <h4 class="text-muted">No books found</h4>
@@ -374,7 +379,7 @@ include '../includes/student_header.php';
     </div>
 </div>
 
-<!-- Book Details Modal -->
+<!-- Book Details Modal (shows details + action button to request) -->
 <div class="modal fade" id="bookModal" tabindex="-1" aria-labelledby="bookModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -436,7 +441,7 @@ include '../includes/student_header.php';
     </div>
 </div>
 
-<!-- Book Request Modal -->
+<!-- Book Request Modal (form to submit request to librarian) -->
 <div class="modal fade" id="requestBookModal" tabindex="-1" aria-labelledby="requestBookModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -493,7 +498,7 @@ include '../includes/student_header.php';
 </div>
 
 <style>
-/* Enhanced button styling for search page */
+/* Button styling tweaks (looks a bit more modern) */
 .btn-primary.btn-lg {
     background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
     border: none;
@@ -577,6 +582,7 @@ include '../includes/student_header.php';
 </style>
 
 <script>
+// show details in the modal (just populating fields, nothing fancy)
 function showBookDetails(book) {
     // Set book name in the display area
     document.getElementById('modalBookNameTitle').textContent = book.title;
@@ -607,7 +613,7 @@ function showBookDetails(book) {
         descriptionElement.innerHTML = '';
     }
     
-    // Set actions
+    // Set actions (enable request if copies available)
     const actionsElement = document.getElementById('modalBookActions');
     if (book.available_copies > 0) {
         actionsElement.innerHTML = '<button type="button" class="btn btn-primary" onclick="openRequestModal(' + book.book_id + ', \'' + book.title.replace(/'/g, '&apos;') + '\', \'' + book.author.replace(/'/g, '&apos;') + '\')">' +
@@ -618,7 +624,7 @@ function showBookDetails(book) {
     }
 }
 
-// Auto-submit form on category/sort change
+// Auto-submit form on category/sort change (small UX sugar)
 document.getElementById('category').addEventListener('change', function() {
     this.form.submit();
 });
@@ -627,12 +633,12 @@ document.getElementById('sort').addEventListener('change', function() {
     this.form.submit();
 });
 
-// Focus search input on page load
+// Focus search input on page load (I like when the cursor is ready to type 😄)
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('search').focus();
 });
 
-// Open request modal
+// Open request modal (prefill with selected book data)
 function openRequestModal(bookId, bookTitle, bookAuthor) {
     document.getElementById('requestBookId').value = bookId;
     document.getElementById('requestBookTitle').textContent = bookTitle;
@@ -647,7 +653,7 @@ function openRequestModal(bookId, bookTitle, bookAuthor) {
     modal.show();
 }
 
-// Handle book request submission
+// Handle book request submission (POST back to this same page)
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('submitBookRequest').addEventListener('click', function() {
         const form = document.getElementById('requestBookForm');

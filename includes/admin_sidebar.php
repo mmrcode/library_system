@@ -14,6 +14,7 @@ if (!defined('LIBRARY_SYSTEM')) {
 }
 
 // Get current page name for active menu highlighting
+// tiny UX touch: highlights the active menu item so admin knows where they are
 $currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 
@@ -171,6 +172,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </ul>
         
         <!-- Quick Stats in Sidebar -->
+        <!-- quick glance numbers; not super accurate in realtime but good enough for nav -->
         <div class="mt-4 px-3">
             <div class="card bg-light border-0">
                 <div class="card-body p-3">
@@ -224,6 +226,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </div>
         
         <!-- System Info -->
+        <!-- version is pulled from APP_VERSION constant; just a nice touch for debugging -->
         <div class="mt-3 px-3">
             <div class="card bg-primary text-white border-0">
                 <div class="card-body p-3 text-center">
@@ -237,7 +240,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 </nav>
 
 <style>
-.sidebar {
+.sidebar { /* fixed sidebar with gradient background */
     position: fixed;
     top: 76px;
     bottom: 0;
@@ -250,7 +253,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     overflow-y: auto;
 }
 
-.sidebar .nav-link {
+.sidebar .nav-link { /* default link style; we nudge color on hover */
     color: rgba(255, 255, 255, 0.8);
     padding: 0.75rem 1.5rem;
     border-radius: 0;
@@ -278,7 +281,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     letter-spacing: 0.05em;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px) { /* slide-in on small screens */
     .sidebar {
         position: fixed;
         top: 76px;
@@ -294,6 +297,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 <script>
 // Sidebar toggle for mobile
+// vanilla JS, no jQuery needed; keeps bundle small
 document.addEventListener('DOMContentLoaded', function() {
     const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebar = document.getElementById('sidebar');

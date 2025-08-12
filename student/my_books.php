@@ -1,7 +1,11 @@
 <?php
 /**
  * Student My Books - Library Management System
- * 
+ *
+ * idea: show student's currently issued/overdue/returned books with quick
+ * status badges and a small details modal. tried to keep UI simple so it's
+ * easy to navigate on mobile too. comments added for viva prep 😅
+ *
  * @author Mohammad Muqsit Raja
  * @reg_no BCA22739
  * @university University of Mysore
@@ -18,20 +22,20 @@ require_once '../includes/functions.php';
 require_once '../includes/student_functions.php';
 require_once '../includes/thumbnail_generator.php';
 
-// Require student access
+// Guard: only students can view their own books
 requireStudent();
 
 $db = Database::getInstance();
 $currentUser = getCurrentUser();
 $userId = $currentUser['user_id'];
 
-// Get filter parameters
+// Get filter parameters (status tab + pagination)
 $status = isset($_GET['status']) ? $_GET['status'] : 'all';
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
 
-// Build query based on status filter
+// Build query based on status filter (we append extra conditions depending on tab)
 $whereConditions = ["bi.user_id = ?"];
 $params = [$userId];
 
@@ -44,52 +48,26 @@ switch ($status) {
         break;
     case 'returned':
         $whereConditions[] = "bi.status = 'returned'";
-        break;
     // 'all' shows all statuses
 }
 
-$whereClause = implode(' AND ', $whereConditions);
+// Now we have our WHERE conditions, let's build the final query string
+$whereClause = implode(' AND ', $whereConditions); // final WHERE for both count and list queries
 
-// Get total count
-$totalBooks = $db->fetchColumn("
-    SELECT COUNT(*) 
-    FROM book_issues bi 
-    WHERE {$whereClause}
-", $params) ?? 0;
+// Get total count (for pagination and tab labels)
+// We need to know how many books we have in total to calculate pagination
+$totalBooks = $db->fetchColumn("\n    SELECT COUNT(*) \n    FROM book_issues bi \n    WHERE {$whereClause}\n", $params) ?? 0;
 
+// Calculate total pages based on limit and total books
 $totalPages = ceil($totalBooks / $limit);
 
-// Get books
-$books = $db->fetchAll("
-    SELECT bi.*, b.title, b.author, b.isbn, c.category_name,
-           DATEDIFF(bi.due_date, CURDATE()) as days_remaining,
-           CASE 
-               WHEN bi.status = 'returned' THEN 'Returned'
-               WHEN bi.status = 'overdue' THEN 'Overdue'
-               WHEN DATEDIFF(bi.due_date, CURDATE()) < 0 THEN 'Overdue'
-               WHEN DATEDIFF(bi.due_date, CURDATE()) <= 3 THEN 'Due Soon'
-               ELSE 'Active'
-           END as display_status,
-           f.fine_amount
-    FROM book_issues bi
-    JOIN books b ON bi.book_id = b.book_id
-    LEFT JOIN categories c ON b.category_id = c.category_id
-    LEFT JOIN fines f ON bi.issue_id = f.issue_id AND f.status = 'pending'
-    WHERE {$whereClause}
-    ORDER BY bi.issue_date DESC
-    LIMIT {$limit} OFFSET {$offset}
-", $params);
+// Get books (joins title/category + pending fine if any; orders by issue date)
+// This is the main query that fetches all the book data we need
+$books = $db->fetchAll("\n    SELECT bi.*, b.title, b.author, b.isbn, c.category_name,\n           DATEDIFF(bi.due_date, CURDATE()) as days_remaining,\n           CASE \n               WHEN bi.status = 'returned' THEN 'Returned'\n               WHEN bi.status = 'overdue' THEN 'Overdue'\n               WHEN DATEDIFF(bi.due_date, CURDATE()) < 0 THEN 'Overdue'\n               WHEN DATEDIFF(bi.due_date, CURDATE()) <= 3 THEN 'Due Soon'\n               ELSE 'Active'\n           END as display_status,\n           f.fine_amount\n    FROM book_issues bi\n    JOIN books b ON bi.book_id = b.book_id\n    LEFT JOIN categories c ON b.category_id = c.category_id\n    LEFT JOIN fines f ON bi.issue_id = f.issue_id AND f.status = 'pending'\n    WHERE {$whereClause}\n    ORDER BY bi.issue_date DESC\n    LIMIT {$limit} OFFSET {$offset}\n", $params);
 
-// Get summary statistics
-$stats = $db->fetchRow("
-    SELECT 
-        COUNT(CASE WHEN status = 'issued' THEN 1 END) as active_count,
-        COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_count,
-        COUNT(CASE WHEN status = 'returned' THEN 1 END) as returned_count,
-        COUNT(*) as total_count
-    FROM book_issues 
-    WHERE user_id = ?
-", [$userId]);
+// Get summary statistics (for the 4 cards on top)
+// We need some quick stats to display on the dashboard
+$stats = $db->fetchRow("\n    SELECT \n        COUNT(CASE WHEN status = 'issued' THEN 1 END) as active_count,\n        COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_count,\n        COUNT(CASE WHEN status = 'returned' THEN 1 END) as returned_count,\n        COUNT(*) as total_count\n    FROM book_issues \n    WHERE user_id = ?\n", [$userId]);
 
 $pageTitle = 'My Books';
 include '../includes/student_header.php';
@@ -97,103 +75,17 @@ include '../includes/student_header.php';
 
 <div class="container-fluid">
     <div class="row">
-        <main class="col-12 px-md-4">
-            <!-- Page Header -->
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">
-                    <i class="fas fa-book me-2"></i>My Books
-                </h1>
-                <div class="btn-toolbar mb-2 mb-md-0">
-                    <div class="btn-group me-2">
-                        <a href="search_books.php" class="btn btn-sm btn-primary">
-                            <i class="fas fa-search me-1"></i>Search More Books
-                        </a>
-                        <a href="dashboard.php" class="btn btn-sm btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-1"></i>Dashboard
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Flash Message -->
-            <?php echo getFlashMessage(); ?>
-
-            <!-- Statistics Cards -->
-            <div class="row mb-4">
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="card dashboard-card">
-                        <div class="card-body text-center">
-                            <h3 class="text-primary"><?php echo $stats['active_count'] ?? 0; ?></h3>
-                            <p class="mb-0">Active Issues</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="card dashboard-card danger">
-                        <div class="card-body text-center">
-                            <h3 class="text-danger"><?php echo $stats['overdue_count'] ?? 0; ?></h3>
-                            <p class="mb-0">Overdue Books</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="card dashboard-card success">
-                        <div class="card-body text-center">
-                            <h3 class="text-success"><?php echo $stats['returned_count'] ?? 0; ?></h3>
-                            <p class="mb-0">Returned Books</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="card dashboard-card info">
-                        <div class="card-body text-center">
-                            <h3 class="text-info"><?php echo $stats['total_count'] ?? 0; ?></h3>
-                            <p class="mb-0">Total Issues</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Filter Tabs -->
-            <div class="card shadow">
-                <div class="card-header">
-                    <ul class="nav nav-tabs card-header-tabs" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo ($status == 'all') ? 'active' : ''; ?>" 
-                               href="?status=all">
-                                All Books (<?php echo $stats['total_count'] ?? 0; ?>)
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo ($status == 'issued') ? 'active' : ''; ?>" 
-                               href="?status=issued">
-                                Active (<?php echo $stats['active_count'] ?? 0; ?>)
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo ($status == 'overdue') ? 'active' : ''; ?>" 
-                               href="?status=overdue">
-                                Overdue (<?php echo $stats['overdue_count'] ?? 0; ?>)
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo ($status == 'returned') ? 'active' : ''; ?>" 
-                               href="?status=returned">
-                                Returned (<?php echo $stats['returned_count'] ?? 0; ?>)
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-
+        <main class="col-md-12 ms-sm-auto px-md-4">
+            <div class="card mt-3">
                 <div class="card-body">
                     <?php if (!empty($books)): ?>
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-striped align-middle">
                                 <thead>
                                     <tr>
-                                        <th>Book Details</th>
-                                        <th>Issue Date</th>
-                                        <th>Due Date</th>
+                                        <th>Book</th>
+                                        <th>Issued On</th>
+                                        <th>Due On</th>
                                         <th>Status</th>
                                         <th>Fine</th>
                                         <th>Actions</th>
@@ -232,6 +124,7 @@ include '../includes/student_header.php';
                                             </td>
                                             <td>
                                                 <?php
+                                                // Set the badge class based on the book's status
                                                 $badgeClass = 'secondary';
                                                 switch ($book['display_status']) {
                                                     case 'Active':
@@ -279,7 +172,7 @@ include '../includes/student_header.php';
                             </table>
                         </div>
 
-                        <!-- Pagination -->
+                        <!-- Pagination (centered) -->
                         <?php if ($totalPages > 1): ?>
                             <nav aria-label="Books pagination" class="mt-4">
                                 <ul class="pagination justify-content-center">
@@ -316,7 +209,7 @@ include '../includes/student_header.php';
                         <?php endif; ?>
 
                     <?php else: ?>
-                        <!-- No Books -->
+                        <!-- No Books (empty states per tab) -->
                         <div class="text-center py-5">
                             <i class="fas fa-book-open fa-4x text-muted mb-3"></i>
                             <h4 class="text-muted">
@@ -356,7 +249,7 @@ include '../includes/student_header.php';
     </div>
 </div>
 
-<!-- Book Details Modal -->
+<!-- Book Details Modal (per-issue detail view) -->
 <div class="modal fade" id="bookDetailsModal" tabindex="-1" aria-labelledby="bookDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -441,6 +334,7 @@ include '../includes/student_header.php';
 </style>
 
 <script>
+// show selected issue in a modal (format a few fields nicely)
 function showBookDetails(book) {
     // Set book name in the display area
     document.getElementById('modalBookNameTitle').textContent = book.title;
@@ -461,7 +355,7 @@ function showBookDetails(book) {
         returnDateElement.textContent = 'Not returned yet';
     }
     
-    // Status
+    // Status (convert to colored badge)
     const statusElement = document.getElementById('modalStatus');
     let statusBadge = '';
     switch (book.display_status) {
@@ -482,7 +376,7 @@ function showBookDetails(book) {
     }
     statusElement.innerHTML = statusBadge;
     
-    // Fine amount
+    // Fine amount (₹ shown only if pending fine exists)
     const fineElement = document.getElementById('modalFineAmount');
     if (book.fine_amount && book.fine_amount > 0) {
         fineElement.innerHTML = '<span class="text-danger">₹' + parseFloat(book.fine_amount).toFixed(2) + '</span>';
@@ -490,7 +384,7 @@ function showBookDetails(book) {
         fineElement.textContent = 'No fine';
     }
     
-    // Notes
+    // Notes (small helpful warnings for student)
     const notesElement = document.getElementById('modalNotes');
     if (book.status !== 'returned' && book.days_remaining < 0) {
         notesElement.innerHTML = '<div class="alert alert-danger"><strong>Note:</strong> This book is ' + Math.abs(book.days_remaining) + ' days overdue. Please return it as soon as possible to avoid additional fines.</div>';
@@ -500,7 +394,7 @@ function showBookDetails(book) {
         notesElement.innerHTML = '';
     }
     
-    // Actions
+    // Actions (for now informational – return action handled by librarian)
     const actionsElement = document.getElementById('modalActions');
     if (book.status !== 'returned') {
         actionsElement.innerHTML = '<span class="text-info"><i class="fas fa-info-circle me-1"></i>Contact the librarian to return this book</span>';
@@ -511,7 +405,7 @@ function showBookDetails(book) {
 
 
 
-// Initialize tooltips
+// Initialize tooltips (for the info icons)
 document.addEventListener('DOMContentLoaded', function() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

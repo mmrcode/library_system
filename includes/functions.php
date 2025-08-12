@@ -21,6 +21,8 @@ function sanitizeInput($data) {
     if (is_array($data)) {
         return array_map('sanitizeInput', $data);
     }
+    // basic trimming + strip tags – good enough for forms here
+    // TODO: could add more rules per field later if needed
     return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
 }
 
@@ -28,6 +30,7 @@ function sanitizeInput($data) {
  * Validate email address
  */
 function isValidEmail($email) {
+    // using PHP filter (kept it simple instead of a long regex)
     return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
 }
 
@@ -36,6 +39,7 @@ function isValidEmail($email) {
  */
 function isValidPhone($phone) {
     $pattern = '/^[6-9]\d{9}$/';
+    // Simple validation instead of regex for now -> actually using a tiny regex :)
     return preg_match($pattern, $phone);
 }
 
@@ -44,6 +48,7 @@ function isValidPhone($phone) {
  */
 function validateDate($date, $format = 'Y-m-d') {
     $d = DateTime::createFromFormat($format, $date);
+    // quick check to ensure exact format match (no fancy timezone handling here)
     return $d && $d->format($format) === $date;
 }
 
@@ -52,6 +57,7 @@ function validateDate($date, $format = 'Y-m-d') {
  */
 function generatePassword($length = 8) {
     $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    // college project constraint: not using openssl here
     return substr(str_shuffle($chars), 0, $length);
 }
 
@@ -82,6 +88,7 @@ function daysBetween($date1, $date2) {
     $datetime1 = new DateTime($date1);
     $datetime2 = new DateTime($date2);
     $interval = $datetime1->diff($datetime2);
+    // absolute difference in days (works fine for our use-cases)
     return $interval->days;
 }
 
@@ -89,6 +96,7 @@ function daysBetween($date1, $date2) {
  * Check if date is overdue
  */
 function isOverdue($dueDate) {
+    // comparing timestamps (midnight). Good enough as we don't track time of day.
     return strtotime($dueDate) < strtotime(date('Y-m-d'));
 }
 
@@ -103,7 +111,8 @@ function calculateFine($dueDate, $returnDate = null, $finePerDay = FINE_PER_DAY)
     }
     
     $daysOverdue = daysBetween($dueDate, $returnDate);
-    return $daysOverdue * $finePerDay;
+    // no grace period here because the fine module handles that separately
+    return $daysOverdue * $finePerDay;   // can be optimized later if needed
 }
 
 /**

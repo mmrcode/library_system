@@ -1,7 +1,11 @@
 <?php
 /**
  * Books Management - Library Management System
- * 
+ *
+ * quick note: this page is basically the librarian's master list
+ * where we can search, filter and do small actions like edit/delete.
+ * I kept the code simple and readable (no fancy frameworks here 😅)
+ *
  * @author Mohammad Muqsit Raja
  * @reg_no BCA22739
  * @university University of Mysore
@@ -17,19 +21,19 @@ require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 require_once '../includes/thumbnail_generator.php';
 
-// Require admin access
+// Guard: only admins should land here (students can't manage books obviously)
 requireAdmin();
 
-$db = Database::getInstance();
+$db = Database::getInstance(); // singleton DB so we don't open connections like crazy
 
-// Handle search and pagination
+// Handle search and pagination (basic UX so admin can find books faster)
 $search = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
 $category = isset($_GET['category']) ? (int)$_GET['category'] : 0;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $recordsPerPage = RECORDS_PER_PAGE;
 $offset = ($page - 1) * $recordsPerPage;
 
-// Build search query
+// Build search query (safe-ish with placeholders; not building raw SQL strings)
 $whereClause = "WHERE b.status = 'active'";
 $params = [];
 
@@ -44,11 +48,11 @@ if ($category > 0) {
     $params[] = $category;
 }
 
-// Get total count
+// Get total count (for pagination UI)
 $countSql = "SELECT COUNT(*) FROM books b $whereClause";
 $totalRecords = $db->fetchColumn($countSql, $params);
 
-// Get books with pagination
+// Get books with pagination (joins category for display)
 $sql = "SELECT b.*, c.category_name 
         FROM books b 
         LEFT JOIN categories c ON b.category_id = c.category_id 
@@ -58,7 +62,7 @@ $sql = "SELECT b.*, c.category_name
 
 $books = $db->fetchAll($sql, $params);
 
-// Get categories for filter
+// Get categories for filter (dropdown list)
 $categories = $db->fetchAll("SELECT * FROM categories ORDER BY category_name");
 
 $pageTitle = 'Manage Books';
@@ -88,10 +92,10 @@ include '../includes/admin_header.php';
                 </div>
             </div>
 
-            <!-- Flash Message -->
+            <!-- Flash Message (success/error from actions) -->
             <?php echo getFlashMessage(); ?>
 
-            <!-- Search and Filter -->
+            <!-- Search and Filter (admin usually types author/title/ISBN here) -->
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="GET" action="" class="row g-3">
@@ -128,7 +132,7 @@ include '../includes/admin_header.php';
                 </div>
             </div>
 
-            <!-- Books Table -->
+            <!-- Books Table (main list) -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
@@ -156,15 +160,18 @@ include '../includes/admin_header.php';
                                 </thead>
                                 <tbody>
                                     <?php foreach ($books as $book): ?>
+                                        <!-- Loop through each book and display the details -->
                                         <tr>
                                             <td>
                                                 <div class="d-flex">
-                                                    <div class="book-cover me-3">
-                                                        <img src="<?php echo generateBookThumbnailFromData($book, 'small'); ?>" 
-                                                             alt="Book Cover" class="img-thumbnail" 
-                                                             style="width: 50px; height: 60px; object-fit: cover;">
-                                                    </div>
+                                                     <!-- tiny thumbnail just for some visual cue -->
+                                                     <div class="book-cover me-3">
+                                                         <img src="<?php echo generateBookThumbnailFromData($book, 'small'); ?>" 
+                                                              alt="Book Cover" class="img-thumbnail" 
+                                                              style="width: 50px; height: 60px; object-fit: cover;">
+                                                     </div>
                                                     <div>
+                                                        <!-- Display book title, author, and publication details -->
                                                         <h6 class="mb-1"><?php echo htmlspecialchars($book['title']); ?></h6>
                                                         <p class="mb-1 text-muted">by <?php echo htmlspecialchars($book['author']); ?></p>
                                                         <small class="text-muted">
@@ -174,42 +181,46 @@ include '../includes/admin_header.php';
                                                     </div>
                                                 </div>
                                             </td>
+                                             <td>
+                                                 <!-- Display book category -->
+                                                 <span class="badge bg-info">
+                                                     <?php echo htmlspecialchars($book['category_name'] ?? 'Uncategorized'); ?>
+                                                 </span>
+                                             </td>
                                             <td>
-                                                <span class="badge bg-info">
-                                                    <?php echo htmlspecialchars($book['category_name'] ?? 'Uncategorized'); ?>
-                                                </span>
-                                            </td>
-                                            <td>
+                                                <!-- Display book copies and availability -->
                                                 <div class="text-center">
                                                     <div class="fw-bold text-primary"><?php echo $book['available_copies']; ?></div>
                                                     <small class="text-muted">of <?php echo $book['total_copies']; ?></small>
                                                 </div>
                                             </td>
+                                             <td>
+                                                 <!-- Display book status badge -->
+                                                 <?php echo getBookStatusBadge($book['available_copies'], $book['total_copies']); ?>
+                                             </td>
                                             <td>
-                                                <?php echo getBookStatusBadge($book['available_copies'], $book['total_copies']); ?>
-                                            </td>
-                                            <td>
+                                                <!-- Display action buttons for each book -->
                                                 <div class="btn-group btn-group-sm">
-                                                    <a href="view_book.php?id=<?php echo $book['book_id']; ?>" 
-                                                       class="btn btn-outline-info" title="View Details">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="edit_book.php?id=<?php echo $book['book_id']; ?>" 
-                                                       class="btn btn-outline-primary" title="Edit">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    <button type="button" class="btn btn-outline-danger" 
-                                                            onclick="deleteBook(<?php echo $book['book_id']; ?>)" title="Delete">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
+                                                     <a href="view_book.php?id=<?php echo $book['book_id']; ?>" 
+                                                        class="btn btn-outline-info" title="View Details">
+                                                         <i class="fas fa-eye"></i>
+                                                     </a>
+                                                     <a href="edit_book.php?id=<?php echo $book['book_id']; ?>" 
+                                                        class="btn btn-outline-primary" title="Edit">
+                                                         <i class="fas fa-edit"></i>
+                                                     </a>
+                                                     <button type="button" class="btn btn-outline-danger" title="Delete" onclick="deleteBook(<?php echo (int)$book['book_id']; ?>)">
+                                                         <i class="fas fa-trash"></i>
+                                                     </button>
+                                                 </div>
+                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
                     <?php else: ?>
+                        <!-- Display message if no books are found -->
                         <div class="text-center py-5">
                             <i class="fas fa-book fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted">No books found</h5>
@@ -234,7 +245,7 @@ include '../includes/admin_header.php';
                         if (!empty($queryParams)) $baseUrl .= '?' . implode('&', $queryParams) . '&';
                         else $baseUrl .= '?';
                         
-                        echo generatePagination($page, $totalRecords, $recordsPerPage, $baseUrl);
+                        echo generatePagination($page, $totalRecords, $recordsPerPage, $baseUrl); // small helper makes pagination neat
                         ?>
                     </div>
                 <?php endif; ?>
@@ -274,17 +285,18 @@ include '../includes/admin_header.php';
 <?php include '../includes/admin_footer.php'; ?>
 
 <script>
-let bookToDelete = null;
+// JS part: only small helpers for actions (kept vanilla JS to avoid heavy deps)
+let bookToDelete = null; // store the id until user confirms
 
 function deleteBook(bookId) {
-    bookToDelete = bookId;
+    bookToDelete = bookId; // set the target book
     const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
     modal.show();
 }
 
 document.getElementById('confirmDelete').addEventListener('click', function() {
     if (bookToDelete) {
-        const restoreButton = showLoading(this);
+        const restoreButton = showLoading(this); // tiny UX: show spinner while we call backend
         
         fetch('ajax/delete_book.php', {
             method: 'POST',
@@ -300,7 +312,7 @@ document.getElementById('confirmDelete').addEventListener('click', function() {
         .then(data => {
             restoreButton();
             if (data.success) {
-                location.reload();
+                location.reload(); // easiest: refresh page to update list
             } else {
                 alert('Error: ' + data.message);
             }
@@ -314,6 +326,7 @@ document.getElementById('confirmDelete').addEventListener('click', function() {
 });
 
 function exportBooks() {
+    // simple export that respects current filters in querystring
     const searchParams = new URLSearchParams(window.location.search);
     searchParams.append('export', '1');
     window.location.href = 'export_books.php?' + searchParams.toString();
@@ -321,6 +334,6 @@ function exportBooks() {
 
 // Auto-submit search form on category change
 document.getElementById('category').addEventListener('change', function() {
-    this.form.submit();
+    this.form.submit(); // I prefer this since admins keep forgetting to hit search button
 });
 </script>

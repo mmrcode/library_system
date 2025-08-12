@@ -11,15 +11,18 @@
 define('LIBRARY_SYSTEM', true);
 
 // Include required files
+// keeping includes explicit for clarity (yes, a bit old-school but readable)
 require_once '../includes/config.php';
 require_once '../includes/database.php';
 require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 
 // Require admin access
+// guard: only librarian/admin folks should land here
 requireAdmin();
 
 // Update overdue books status
+// quick housekeeping: mark overdue stuff before we compute stats
 updateOverdueBooks();
 
 // Get dashboard statistics
@@ -61,6 +64,7 @@ $pendingRequests = $db->fetchAll("
         br.request_date
     LIMIT 10
 ") ?? [];
+// NOTE: order by priority first so we don't miss urgent ones at the top
 
 // Recent activities
 $recentActivities = $db->fetchAll("
@@ -118,9 +122,11 @@ include '../includes/admin_header.php';
             </div>
 
             <!-- Flash Message -->
+            <!-- Showing one-off success/error messages (set via helpers) -->
             <?php echo getFlashMessage(); ?>
 
             <!-- Statistics Cards -->
+            <!-- Quick glance metrics; not trying to be too fancy here -->
             <div class="row mb-4">
                 <div class="col-xl-3 col-md-6 mb-4">
                     <div class="card dashboard-card">
@@ -188,6 +194,7 @@ include '../includes/admin_header.php';
             </div>
 
             <!-- Additional Statistics Row -->
+            <!-- Some extra cards that admins usually ask for during demos -->
             <div class="row mb-4">
                 <div class="col-xl-6 col-md-6 mb-4">
                     <div class="card dashboard-card info">
@@ -223,6 +230,7 @@ include '../includes/admin_header.php';
             </div>
 
             <!-- Content Row -->
+            <!-- Tables below are intentionally compact; admins like quick skim-able lists -->
             <div class="row">
                 <!-- Recent Book Issues -->
                 <div class="col-lg-6 mb-4">
@@ -452,6 +460,7 @@ include '../includes/admin_header.php';
 
 <script>
 // Handle approve/reject book requests
+// Keeping vanilla JS here (no jQuery dependency)
 document.addEventListener('DOMContentLoaded', function() {
     // Approve request
     document.querySelectorAll('.approve-request').forEach(button => {
@@ -505,6 +514,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show alert message
     function showAlert(type, message) {
+        // tiny helper to surface feedback without leaving page
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
         alertDiv.role = 'alert';
@@ -527,6 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 // Auto-refresh dashboard every 5 minutes
+// TODO: maybe make this configurable in settings later
 setTimeout(function() {
     location.reload();
 }, 300000);
